@@ -86,6 +86,7 @@ export function useWebRTC(roomCode: string): {
   // Initialize the peer on mount
   useEffect(() => {
     isMountedRef.current = true;
+    reconnectAttemptsRef.current = 0;
 
     let localStreamCapture: MediaStream | null = null;
 

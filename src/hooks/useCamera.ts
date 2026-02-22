@@ -75,6 +75,8 @@ export function useCamera(): UseCameraReturn {
 
   const streamRef = useRef<MediaStream | null>(null);
   const isMountedRef = useRef(true);
+  const isStartingRef = useRef(false);
+  const settingsRef = useRef(settings);
 
   // Stop any active stream
   const stopCamera = useCallback(() => {
@@ -107,6 +109,12 @@ export function useCamera(): UseCameraReturn {
     }
   }, []);
 
+  // Keep settingsRef in sync so startCamera reads latest settings without
+  // being recreated on every settings change.
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
   const startCamera = useCallback(async () => {
     if (typeof navigator === "undefined" || !navigator.mediaDevices) {
       setError("Camera API is not available in this environment.");
@@ -114,17 +122,23 @@ export function useCamera(): UseCameraReturn {
       return;
     }
 
+    // Guard against concurrent calls (e.g. mount + rapid Apply click)
+    if (isStartingRef.current) return;
+    isStartingRef.current = true;
+
     // Stop current stream before starting a new one
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
 
+    // Clear React state so WebcamFeed correctly shows the spinner
+    setStream(null);
     setCameraState("loading");
     setError(null);
 
     try {
-      const videoConstraints = buildVideoConstraints(settings);
+      const videoConstraints = buildVideoConstraints(settingsRef.current);
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: videoConstraints,
         audio: true,
@@ -146,17 +160,22 @@ export function useCamera(): UseCameraReturn {
       const message = parseMediaError(err);
       setError(message);
       setCameraState("error");
+    } finally {
+      isStartingRef.current = false;
     }
-  }, [settings, enumerateDevices]);
+  }, [enumerateDevices]);
 
   const updateSettings = useCallback((partial: Partial<CameraSettings>) => {
     setSettings((prev) => ({ ...prev, ...partial }));
   }, []);
 
-  // Cleanup on unmount
+  // Track mount state — must reset on each mount for React strict mode
   useEffect(() => {
+    isMountedRef.current = true;
+    isStartingRef.current = false;
     return () => {
       isMountedRef.current = false;
+      isStartingRef.current = false;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;

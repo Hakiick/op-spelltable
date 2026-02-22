@@ -86,9 +86,10 @@ export default function RoomClient({ room }: RoomClientProps) {
     }
   };
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
     camera.stopCamera();
-    void actions.disconnect();
+    await actions.disconnect();
+    router.push("/lobby");
   };
 
   // CRITIQUE-1: Toggle mute by enabling/disabling audio tracks on the stream
