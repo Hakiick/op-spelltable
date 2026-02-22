@@ -3,10 +3,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/database/rooms", () => ({
   createRoom: vi.fn(),
   getRoomByCode: vi.fn(),
+  getRoomById: vi.fn(),
   updateRoom: vi.fn(),
 }));
 
-import { createRoom, getRoomByCode, updateRoom } from "@/lib/database/rooms";
+vi.mock("@/lib/auth", () => ({
+  auth: vi.fn().mockResolvedValue(null),
+}));
+
+import { createRoom, getRoomByCode, getRoomById, updateRoom } from "@/lib/database/rooms";
 import { POST as createRoomHandler } from "@/app/api/rooms/route";
 import {
   GET as getRoomHandler,
@@ -18,9 +23,19 @@ const mockRoom = {
   roomCode: "ABC123",
   hostPeerId: "peer-host-1",
   guestPeerId: null,
+  hostUserId: null,
+  guestUserId: null,
+  name: null,
+  isPublic: false,
   status: "waiting",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+};
+
+const mockRoomWithUsers = {
+  ...mockRoom,
+  hostUser: null,
+  guestUser: null,
 };
 
 beforeEach(() => {
@@ -44,7 +59,32 @@ describe("POST /api/rooms", () => {
     expect(json.roomCode).toBe("ABC123");
     expect(json.status).toBe("waiting");
     expect(json.hostPeerId).toBe("peer-host-1");
-    expect(createRoom).toHaveBeenCalledWith("peer-host-1");
+    expect(createRoom).toHaveBeenCalledWith(
+      "peer-host-1",
+      expect.objectContaining({ name: undefined, isPublic: undefined })
+    );
+  });
+
+  it("creates a room with name and isPublic", async () => {
+    const namedRoom = { ...mockRoom, name: "My Battle", isPublic: true };
+    vi.mocked(createRoom).mockResolvedValue(namedRoom);
+
+    const request = new Request("http://localhost:3000/api/rooms", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ hostPeerId: "peer-host-1", name: "My Battle", isPublic: true }),
+    });
+
+    const response = await createRoomHandler(request as never);
+    const json = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(json.name).toBe("My Battle");
+    expect(json.isPublic).toBe(true);
+    expect(createRoom).toHaveBeenCalledWith(
+      "peer-host-1",
+      expect.objectContaining({ name: "My Battle", isPublic: true })
+    );
   });
 
   it("creates a room without hostPeerId when body is empty", async () => {
@@ -59,7 +99,10 @@ describe("POST /api/rooms", () => {
 
     expect(response.status).toBe(201);
     expect(json.hostPeerId).toBeNull();
-    expect(createRoom).toHaveBeenCalledWith(undefined);
+    expect(createRoom).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({ name: undefined, isPublic: undefined })
+    );
   });
 
   it("returns 500 when createRoom throws", async () => {
@@ -80,6 +123,7 @@ describe("POST /api/rooms", () => {
 describe("GET /api/rooms/[code]", () => {
   it("returns 200 with room data when room is found", async () => {
     vi.mocked(getRoomByCode).mockResolvedValue(mockRoom);
+    vi.mocked(getRoomById).mockResolvedValue(mockRoomWithUsers as never);
 
     const response = await getRoomHandler(
       new Request("http://localhost:3000/api/rooms/ABC123"),
@@ -144,6 +188,33 @@ describe("PATCH /api/rooms/[code]", () => {
     expect(updateRoom).toHaveBeenCalledWith("ABC123", {
       guestPeerId: "peer-guest-1",
       status: "ready",
+    });
+  });
+
+  it("updates guestUserId and status to playing", async () => {
+    const updatedRoom = {
+      ...mockRoom,
+      guestUserId: "usr002",
+      status: "playing",
+    };
+    vi.mocked(getRoomByCode).mockResolvedValue(mockRoom);
+    vi.mocked(updateRoom).mockResolvedValue(updatedRoom);
+
+    const response = await updateRoomHandler(
+      new Request("http://localhost:3000/api/rooms/ABC123", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ guestUserId: "usr002", status: "playing" }),
+      }),
+      { params: Promise.resolve({ code: "ABC123" }) }
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.status).toBe("playing");
+    expect(updateRoom).toHaveBeenCalledWith("ABC123", {
+      guestUserId: "usr002",
+      status: "playing",
     });
   });
 
