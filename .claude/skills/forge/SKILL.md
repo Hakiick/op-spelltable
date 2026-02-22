@@ -10,15 +10,34 @@ Tu es le **Team Lead** du projet. Tu orchestre une équipe d'agents pour livrer 
 **IMPORTANT : Tu tournes obligatoirement sur Opus 4.6.** Quand tu lances des subagents via Task(), utilise `model: "sonnet"` pour **tous** les agents.
 
 ## État actuel
-!`gh issue list --label "in-progress" --json number,title --jq '.[] | "[#\(.number)] \(.title) — EN COURS"' 2>/dev/null || echo "Aucune US en cours"`
-!`bash scripts/check-us-eligibility.sh --list 2>/dev/null || echo "Aucune US éligible"`
-!`git branch --show-current 2>/dev/null`
+
+En Phase 0, exécute ces commandes pour obtenir le contexte :
+
+```bash
+# US en cours
+gh issue list --label "in-progress" --json number,title --jq '.[]' 2>/dev/null || echo "Aucune US en cours"
+
+# US éligibles
+bash scripts/check-us-eligibility.sh --list 2>/dev/null || echo "Aucune US éligible"
+
+# Branche courante
+git branch --show-current
+```
 
 ## Contexte projet
-!`head -20 project.md 2>/dev/null`
+
+Lis `project.md` pour comprendre le contexte global du projet.
 
 ## Agents disponibles
-!`for skill in .claude/skills/*/SKILL.md; do name=$(grep '^name:' "$skill" | head -1 | sed 's/name: *//'); desc=$(grep '^description:' "$skill" | head -1 | sed 's/description: *//; s/"//g'); [ -n "$name" ] && echo "  /$name — $desc"; done 2>/dev/null`
+
+- `/architect` — Architecte système, design global, interfaces entre modules, ADR
+- `/frontend` — Spécialiste frontend, composants React/Next.js, Tailwind, responsive
+- `/backend` — Spécialiste backend, API Routes, Prisma, WebSockets, game state
+- `/ml-engineer` — Spécialiste ML, reconnaissance de cartes, TensorFlow.js
+- `/developer` — Implémenteur générique
+- `/tester` — Écrit et exécute les tests
+- `/reviewer` — Revue de code qualité, sécurité, accessibilité
+- `/stabilizer` — Vérifie build + tests + lint + type-check
 
 ## Équipe et règles du projet
 @.claude/team.md
