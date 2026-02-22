@@ -61,7 +61,7 @@ describe("GameBoard", () => {
     expect(screen.getByTestId("opponent-area")).toBeInTheDocument();
   });
 
-  it("renders the phase indicator", () => {
+  it("renders the turn phase indicator", () => {
     render(
       <GameBoard
         localBoard={makeMockBoard()}
@@ -70,29 +70,27 @@ describe("GameBoard", () => {
         turnNumber={3}
       />
     );
-    expect(screen.getByTestId("phase-indicator")).toBeInTheDocument();
+    expect(screen.getByTestId("turn-phase-indicator")).toBeInTheDocument();
     expect(screen.getByText("Turn 3")).toBeInTheDocument();
-    expect(screen.getByText("Main Phase")).toBeInTheDocument();
   });
 
-  it("renders each GamePhase correctly", () => {
-    const phases = ["refresh", "draw", "don", "main", "end"] as const;
-    const labels = ["Refresh Phase", "Draw Phase", "DON!! Phase", "Main Phase", "End Phase"];
-
-    phases.forEach((phase, i) => {
-      const { unmount } = render(
-        <GameBoard
-          localBoard={makeMockBoard()}
-          opponentBoard={makeMockBoard()}
-          gamePhase={phase}
-        />
-      );
-      expect(screen.getByText(labels[i])).toBeInTheDocument();
-      unmount();
-    });
+  it("renders all 5 phase labels in the indicator bar", () => {
+    render(
+      <GameBoard
+        localBoard={makeMockBoard()}
+        opponentBoard={makeMockBoard()}
+        gamePhase="main"
+      />
+    );
+    expect(screen.getByText("Refresh")).toBeInTheDocument();
+    expect(screen.getByText("Draw")).toBeInTheDocument();
+    // "DON!!" appears in both the TurnPhaseIndicator and in the PlayerArea zone label
+    expect(screen.getAllByText("DON!!").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Main")).toBeInTheDocument();
+    expect(screen.getByText("End")).toBeInTheDocument();
   });
 
-  it("shows 'Your turn' badge when isLocalTurn=true", () => {
+  it("shows 'Your turn' when isLocalTurn=true", () => {
     render(
       <GameBoard
         localBoard={makeMockBoard()}
@@ -103,7 +101,7 @@ describe("GameBoard", () => {
     expect(screen.getByText("Your turn")).toBeInTheDocument();
   });
 
-  it("does not show 'Your turn' badge when isLocalTurn=false", () => {
+  it("shows \"Opponent's turn\" when isLocalTurn=false", () => {
     render(
       <GameBoard
         localBoard={makeMockBoard()}
@@ -111,7 +109,7 @@ describe("GameBoard", () => {
         isLocalTurn={false}
       />
     );
-    expect(screen.queryByText("Your turn")).not.toBeInTheDocument();
+    expect(screen.getByText("Opponent's turn")).toBeInTheDocument();
   });
 
   it("renders local player name", () => {
@@ -134,10 +132,7 @@ describe("GameBoard", () => {
         opponentBoard={makeMockBoard()}
       />
     );
-    // Default: turn 1
     expect(screen.getByText("Turn 1")).toBeInTheDocument();
-    // Default phase: main
-    expect(screen.getByText("Main Phase")).toBeInTheDocument();
   });
 
   it("renders all seven zone labels (twice — one per player)", () => {
@@ -147,7 +142,6 @@ describe("GameBoard", () => {
         opponentBoard={makeMockBoard()}
       />
     );
-    // Each PlayerArea renders: Leader, Characters, Stage, DON!!, Life, Deck, Trash
     const leaderLabels = screen.getAllByText("Leader");
     expect(leaderLabels).toHaveLength(2);
 
@@ -155,17 +149,26 @@ describe("GameBoard", () => {
     expect(deckLabels).toHaveLength(2);
   });
 
-  it("has aria-label for phase indicator", () => {
+  it("shows Next Phase button when isLocalTurn=true and onNextPhase is provided", () => {
     render(
       <GameBoard
         localBoard={makeMockBoard()}
         opponentBoard={makeMockBoard()}
-        gamePhase="draw"
-        turnNumber={2}
+        isLocalTurn={true}
+        onNextPhase={() => undefined}
       />
     );
-    expect(
-      screen.getByLabelText("Turn 2, Draw phase")
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("next-phase-button")).toBeInTheDocument();
+  });
+
+  it("does not show Next Phase button when onNextPhase is not provided", () => {
+    render(
+      <GameBoard
+        localBoard={makeMockBoard()}
+        opponentBoard={makeMockBoard()}
+        isLocalTurn={true}
+      />
+    );
+    expect(screen.queryByTestId("next-phase-button")).not.toBeInTheDocument();
   });
 });
