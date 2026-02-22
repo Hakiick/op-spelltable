@@ -1,0 +1,33 @@
+# Règles de commits
+
+- Commits atomiques : un commit = un changement logique
+- Messages en français ou anglais (cohérent avec le projet)
+- **YOU MUST** utiliser le format : `type(scope): description courte`
+  - `feat(scope): description` — nouvelle feature
+  - `fix(scope): description` — correction de bug
+  - `refactor(scope): description` — refactoring sans changement de comportement
+  - `test(scope): description` — ajout ou modification de tests
+  - `docs(scope): description` — documentation
+  - `chore(scope): description` — maintenance, config
+  - `perf(scope): description` — amélioration de performance
+  - `security(scope): description` — amélioration de sécurité
+- Le **scope** identifie le domaine fonctionnel concerné. Exemples :
+  - `(game)` — Interface de jeu, GameBoard, zones de jeu
+  - `(cards)` — Cartes One Piece, card browser, card data
+  - `(webrtc)` — WebRTC, signaling, peer connection
+  - `(ml)` — Machine learning, reconnaissance de cartes
+  - `(api)` — API Routes, backend logic
+  - `(db)` — Base de données, Prisma, migrations
+  - `(auth)` — Authentification, sessions, profils
+  - `(ui)` — Composants UI génériques, design system
+  - `(video)` — Webcam, flux vidéo, caméra
+  - `(lobby)` — Matchmaking, lobby, création de parties
+- Exemples concrets :
+  - `feat(game): add GameBoard component with all player zones`
+  - `feat(webrtc): implement peer-to-peer connection via PeerJS`
+  - `feat(ml): add ORB feature matching pipeline for card recognition`
+  - `feat(cards): create card browser with search and filters`
+  - `feat(db): add Prisma schema for cards, users, and game sessions`
+  - `fix(video): correct webcam mirror mode on mobile`
+  - `perf(ml): optimize card recognition to 10 FPS`
+- Ne jamais committer de fichiers .env, .env.local, secrets, ou credentials
