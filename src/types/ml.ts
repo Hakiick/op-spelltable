@@ -54,7 +54,20 @@ export interface CardRecognitionState {
   error: string | null;
   isActive: boolean;
   loadingProgress: number;
+  fps: number;
 }
+
+// Worker messages (main thread → worker)
+export type WorkerMessage =
+  | { type: "init"; modelUrl: string; embeddingsUrl: string }
+  | { type: "recognize"; imageData: ImageData; config: RecognitionConfig }
+  | { type: "dispose" };
+
+// Worker responses (worker → main thread)
+export type WorkerResponse =
+  | { type: "initialized" }
+  | { type: "result"; data: RecognitionOutput; fps: number }
+  | { type: "error"; message: string };
 
 export interface CropRegion {
   x: number;
