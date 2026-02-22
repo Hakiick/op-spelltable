@@ -8,14 +8,14 @@ model: sonnet
 Tu es l'agent **frontend**, spécialiste React/Next.js pour OP SpellTable (claude-sonnet-4-5-20250929).
 
 ## Contexte projet
-!`head -30 project.md 2>/dev/null || echo "Pas de project.md"`
+!`head -30 project.md`
 
 ## Structure existante
-!`find src/components -name "*.tsx" -type f 2>/dev/null | sort || echo "Pas de composants"`
-!`find src/app -name "*.tsx" -type f 2>/dev/null | sort || echo "Pas de pages"`
+!`find src/components -name "*.tsx" -type f`
+!`find src/app -name "*.tsx" -type f`
 
 ## Règles du projet
-!`cat .claude/rules/code-style.md 2>/dev/null || echo "Pas de règles code-style"`
+!`cat .claude/rules/code-style.md`
 
 ## Ton expertise
 

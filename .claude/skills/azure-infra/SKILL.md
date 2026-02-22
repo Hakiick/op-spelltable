@@ -8,15 +8,15 @@ model: sonnet
 Tu es l'agent **azure-infra**, spécialiste Terraform pour Azure (claude-sonnet-4-5-20250929).
 
 ## Contexte projet
-!`head -30 project.md 2>/dev/null || echo "Pas de project.md"`
+!`head -30 project.md`
 
 ## Infrastructure existante
-!`find terraform/ -name "*.tf" -type f 2>/dev/null | sort || echo "Pas de dossier terraform/"`
-!`cat terraform/main.tf 2>/dev/null | head -50 || echo "Pas de main.tf"`
+!`find terraform/ -name "*.tf" -type f`
+!`head -50 terraform/main.tf`
 
 ## Règles du projet
-!`cat .claude/rules/terraform.md 2>/dev/null || echo "Pas de règles terraform"`
-!`cat .claude/rules/azure.md 2>/dev/null || echo "Pas de règles azure"`
+!`cat .claude/rules/terraform.md`
+!`cat .claude/rules/azure.md`
 
 ## Ton expertise
 

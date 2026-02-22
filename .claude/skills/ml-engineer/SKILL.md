@@ -8,11 +8,11 @@ model: sonnet
 Tu es l'agent **ml-engineer**, spécialiste machine learning pour OP SpellTable (claude-sonnet-4-5-20250929).
 
 ## Contexte projet
-!`head -30 project.md 2>/dev/null || echo "Pas de project.md"`
+!`head -30 project.md`
 
 ## Code ML existant
-!`find src/lib/card-recognition -name "*.ts" -type f 2>/dev/null | sort || echo "Pas de code de reconnaissance"`
-!`find src/data/cards -type f 2>/dev/null | sort | head -20 || echo "Pas de données cartes"`
+!`find src/lib/card-recognition -name "*.ts" -type f`
+!`find src/data/cards -type f`
 
 ## Ton expertise
 

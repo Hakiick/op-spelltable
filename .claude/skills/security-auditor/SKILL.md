@@ -9,15 +9,15 @@ allowed-tools: Read, Glob, Grep, WebSearch, WebFetch
 Tu es l'agent **security-auditor**, auditeur de sécurité infrastructure (claude-sonnet-4-5-20250929).
 
 ## Contexte projet
-!`head -30 project.md 2>/dev/null || echo "Pas de project.md"`
+!`head -30 project.md`
 
 ## Infrastructure
-!`find terraform/ -name "*.tf" -type f 2>/dev/null | sort || echo "Pas de terraform/"`
-!`find . -name "Dockerfile*" -type f 2>/dev/null | sort || echo "Pas de Dockerfile"`
-!`find .github/workflows/ -name "*.yml" -type f 2>/dev/null | sort || echo "Pas de workflows"`
+!`find terraform/ -name "*.tf" -type f`
+!`find . -name "Dockerfile*" -type f`
+!`find .github/workflows/ -name "*.yml" -type f`
 
 ## Règles sécurité
-!`cat .claude/rules/azure.md 2>/dev/null || echo "Pas de règles azure"`
+!`cat .claude/rules/azure.md`
 
 ## Ton expertise
 

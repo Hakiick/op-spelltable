@@ -10,8 +10,8 @@ Tu dépiles la prochaine feature. Suis le workflow séquentiel.
 **IMPORTANT : Tu tournes sur Opus 4.6.** Quand tu lances des subagents via Task(), utilise `model: "sonnet"` pour **tous** les agents.
 
 ## État actuel
-!`gh issue list --label "in-progress" --json number,title --jq '.[] | "[#\(.number)] \(.title) — EN COURS"' 2>/dev/null || echo "Aucune US en cours"`
-!`bash scripts/check-us-eligibility.sh --list 2>/dev/null || echo "Script check-us-eligibility.sh non trouvé"`
+!`gh issue list --label "in-progress" --json number,title --jq '.[]'`
+!`bash scripts/check-us-eligibility.sh --list`
 !`git branch --show-current 2>/dev/null`
 
 ## Équipe agentique

@@ -7,13 +7,13 @@ user-invocable: true
 You are the DevOps engineer (claude-sonnet-4-5-20250929).
 
 ## Project context
-!`head -30 project.md 2>/dev/null || echo "No project.md found"`
+!`head -30 project.md`
 
 ## Infrastructure
-!`ls *.tf 2>/dev/null || ls terraform/*.tf 2>/dev/null || echo "Terraform not available"`
+!`ls terraform/*.tf`
 
 ## CI/CD workflows
-!`ls .github/workflows/*.yml 2>/dev/null || echo "No workflows"`
+!`ls .github/workflows/*.yml`
 
 ## Implementation rules
 

@@ -10,7 +10,7 @@ Tu es le développeur principal du projet.
 **Tu tournes sur Sonnet 4.6** pour une implémentation de qualité maximale.
 
 ## Contexte projet
-!`head -30 project.md 2>/dev/null || echo "Pas de project.md"`
+!`head -30 project.md`
 
 ## Règles d'implémentation
 

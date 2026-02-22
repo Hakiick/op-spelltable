@@ -13,11 +13,11 @@ Tu es l'architecte système d'OP SpellTable. Ton rôle est de planifier AVANT d'
 **Tu tournes sur Sonnet 4.6** pour des analyses architecturales de qualité maximale.
 
 ## Contexte projet
-!`head -50 project.md 2>/dev/null || echo "Pas de project.md"`
+!`head -50 project.md`
 
 ## Code existant
-!`find src/ -name "*.ts" -o -name "*.tsx" -type f 2>/dev/null | sort || echo "Pas de src/"`
-!`cat prisma/schema.prisma 2>/dev/null | head -30 || echo "Pas de schema Prisma"`
+!`find src/ -name "*.ts" -type f`
+!`head -30 prisma/schema.prisma`
 
 ## Ta mission
 

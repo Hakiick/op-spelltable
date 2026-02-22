@@ -8,15 +8,15 @@ model: sonnet
 Tu es l'agent **db-architect**, architecte base de données (claude-sonnet-4-5-20250929).
 
 ## Contexte projet
-!`head -30 project.md 2>/dev/null || echo "Pas de project.md"`
+!`head -30 project.md`
 
 ## Schemas existants
-!`find . -name "*.sql" -type f 2>/dev/null | sort | head -20 || echo "Pas de fichiers SQL"`
-!`find . -path "*/migrations/*" -type f 2>/dev/null | sort | head -20 || echo "Pas de migrations"`
-!`find . -path "*/priv/repo/migrations/*" -type f 2>/dev/null | sort | head -10 || echo "Pas de migrations Ecto"`
+!`find . -name "*.sql" -type f`
+!`find . -path "*/migrations/*" -type f`
+!`find . -path "*/priv/repo/migrations/*" -type f`
 
 ## Infrastructure DB
-!`grep -r "postgresql" terraform/ 2>/dev/null | head -10 || echo "Pas de config PostgreSQL dans terraform/"`
+!`grep -r "postgresql" terraform/`
 
 ## Ton expertise
 

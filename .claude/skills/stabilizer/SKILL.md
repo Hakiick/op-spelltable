@@ -10,8 +10,8 @@ Tu es le stabilisateur du projet OP SpellTable. Ton rôle est de garantir que le
 **Tu tournes sur Sonnet 4.6** — efficace pour les checks de stabilité.
 
 ## Code existant
-!`find src/ -name "*.ts" -o -name "*.tsx" -type f 2>/dev/null | wc -l || echo "0 fichiers"`
-!`cat package.json 2>/dev/null | head -30 || echo "Pas de package.json"`
+!`find src/ -name "*.ts" -type f`
+!`head -30 package.json`
 
 ## Procédure de stabilisation
 

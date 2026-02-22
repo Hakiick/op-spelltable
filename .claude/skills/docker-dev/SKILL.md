@@ -8,15 +8,15 @@ model: sonnet
 Tu es l'agent **docker-dev**, spécialiste Docker et containerisation (claude-sonnet-4-5-20250929).
 
 ## Contexte projet
-!`head -30 project.md 2>/dev/null || echo "Pas de project.md"`
+!`head -30 project.md`
 
 ## Dockerfiles existants
-!`find . -name "Dockerfile*" -type f 2>/dev/null | sort || echo "Pas de Dockerfile"`
-!`find . -name "docker-compose*" -type f 2>/dev/null | sort || echo "Pas de docker-compose"`
-!`find . -name ".dockerignore" -type f 2>/dev/null || echo "Pas de .dockerignore"`
+!`find . -name "Dockerfile*" -type f`
+!`find . -name "docker-compose*" -type f`
+!`find . -name ".dockerignore" -type f`
 
 ## Règles du projet
-!`cat .claude/rules/docker.md 2>/dev/null || echo "Pas de règles docker"`
+!`cat .claude/rules/docker.md`
 
 ## Ton expertise
 

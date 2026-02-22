@@ -10,15 +10,15 @@ Tu es le **Team Lead** du projet. Tu orchestre une équipe d'agents pour livrer 
 **IMPORTANT : Tu tournes obligatoirement sur Opus 4.6.** Quand tu lances des subagents via Task(), utilise `model: "sonnet"` pour **tous** les agents.
 
 ## État actuel
-!`gh issue list --label "in-progress" --json number,title --jq '.[] | "[#\(.number)] \(.title) — EN COURS"' 2>/dev/null || echo "Aucune US en cours"`
-!`bash scripts/check-us-eligibility.sh --list 2>/dev/null || echo "Aucune US éligible"`
+!`gh issue list --label "in-progress" --json number,title --jq '.[]'`
+!`bash scripts/check-us-eligibility.sh --list`
 !`git branch --show-current 2>/dev/null`
 
 ## Contexte projet
 !`head -20 project.md 2>/dev/null`
 
 ## Agents disponibles
-!`for skill in .claude/skills/*/SKILL.md; do name=$(grep '^name:' "$skill" | head -1 | sed 's/name: *//'); desc=$(grep '^description:' "$skill" | head -1 | sed 's/description: *//; s/"//g'); [ -n "$name" ] && echo "  /$name — $desc"; done 2>/dev/null`
+!`ls .claude/skills/`
 
 ## Équipe et règles du projet
 @.claude/team.md
@@ -177,8 +177,8 @@ Avant d'exécuter le pipeline, détecte le mode disponible :
 
 ```bash
 # Vérifier si une session tmux forge existe ET si elle contient des windows agents
-TMUX_WINDOWS=$(tmux list-windows -t forge -F '#{window_name}' 2>/dev/null || echo "")
-AGENT_WINDOWS=$(echo "$TMUX_WINDOWS" | grep -cvE '^(orchestrateur|monitor)$' 2>/dev/null || echo "0")
+TMUX_WINDOWS=$(tmux list-windows -t forge -F '#{window_name}' 2>/dev/null)
+AGENT_WINDOWS=$(echo "$TMUX_WINDOWS" | grep -cvE '^(orchestrateur|monitor)$' 2>/dev/null)
 
 echo "TMUX_WINDOWS: $TMUX_WINDOWS"
 echo "AGENT_WINDOWS_COUNT: $AGENT_WINDOWS"

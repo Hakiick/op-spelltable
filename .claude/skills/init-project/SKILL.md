@@ -10,7 +10,7 @@ Tu initialises le projet. Le setup est **entièrement automatique** — tu analy
 **IMPORTANT : Tu tournes sur Opus 4.6.** Les agents que tu génères doivent spécifier `model: sonnet` dans leur SKILL.md. **Tous les agents tournent sur Sonnet 4.6.**
 
 ## Contexte du projet
-!`cat project.md 2>/dev/null || echo "ERREUR: project.md manquant. Crée-le d'abord."`
+!`cat project.md`
 
 ---
 

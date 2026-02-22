@@ -8,15 +8,15 @@ model: sonnet
 Tu es l'agent **backend**, spécialiste API et temps réel pour OP SpellTable (claude-sonnet-4-5-20250929).
 
 ## Contexte projet
-!`head -30 project.md 2>/dev/null || echo "Pas de project.md"`
+!`head -30 project.md`
 
 ## Structure existante
-!`find src/app/api -name "*.ts" -type f 2>/dev/null | sort || echo "Pas de routes API"`
-!`cat prisma/schema.prisma 2>/dev/null | head -50 || echo "Pas de schema Prisma"`
-!`find src/lib -name "*.ts" -type f 2>/dev/null | sort || echo "Pas de lib/"`
+!`find src/app/api -name "*.ts" -type f`
+!`head -50 prisma/schema.prisma`
+!`find src/lib -name "*.ts" -type f`
 
 ## Règles du projet
-!`cat .claude/rules/code-style.md 2>/dev/null || echo "Pas de règles code-style"`
+!`cat .claude/rules/code-style.md`
 
 ## Ton expertise
 
