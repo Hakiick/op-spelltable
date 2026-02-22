@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import type { CardData } from "@/types/card";
+import CardDetailOverlay from "@/components/game/CardDetailOverlay";
 
 export type CardZoneVariant =
   | "leader"
@@ -45,9 +47,11 @@ const BORDER_COLOURS: Record<CardZoneVariant, string> = {
 function CardSlot({
   card,
   faceDown = false,
+  onClick,
 }: {
   card?: CardData | null;
   faceDown?: boolean;
+  onClick?: (cardId: string) => void;
 }) {
   if (!card) {
     return (
@@ -68,11 +72,28 @@ function CardSlot({
     );
   }
 
+  const handleClick = onClick
+    ? () => onClick(card.cardId)
+    : undefined;
+
+  const handleKeyDown = onClick
+    ? (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick(card.cardId);
+        }
+      }
+    : undefined;
+
   return (
     <div
-      className="relative h-16 w-12 overflow-hidden rounded border border-gray-500 bg-gray-800 md:h-24 md:w-16"
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      className={`relative h-16 w-12 overflow-hidden rounded border border-gray-500 bg-gray-800 md:h-24 md:w-16${onClick ? " cursor-pointer transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400" : ""}`}
       title={card.name}
       aria-label={card.name}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
     >
       {card.imageUrl ? (
         <Image
@@ -194,6 +215,7 @@ export default function CardZone({
   className = "",
 }: CardZoneProps) {
   const borderColour = BORDER_COLOURS[variant];
+  const [selectedCardCode, setSelectedCardCode] = useState<string | null>(null);
 
   const renderContent = () => {
     switch (variant) {
@@ -201,7 +223,23 @@ export default function CardZone({
         const leader = cards[0] ?? null;
         return (
           <div className="flex flex-col items-center gap-1">
-            <div className="relative h-20 w-14 overflow-hidden rounded border-2 border-amber-500 bg-gray-800 md:h-28 md:w-20">
+            <div
+              role={leader ? "button" : undefined}
+              tabIndex={leader ? 0 : undefined}
+              className={`relative h-20 w-14 overflow-hidden rounded border-2 border-amber-500 bg-gray-800 md:h-28 md:w-20${leader ? " cursor-pointer transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400" : ""}`}
+              aria-label={leader ? leader.name : "Empty leader slot"}
+              onClick={leader ? () => setSelectedCardCode(leader.cardId) : undefined}
+              onKeyDown={
+                leader
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedCardCode(leader.cardId);
+                      }
+                    }
+                  : undefined
+              }
+            >
               {leader ? (
                 leader.imageUrl ? (
                   <Image
@@ -241,7 +279,10 @@ export default function CardZone({
           <div className="flex gap-1" role="list" aria-label="Character area">
             {slots.map((card, i) => (
               <div key={card ? card.id : `empty-slot-${i}`} role="listitem">
-                <CardSlot card={card} />
+                <CardSlot
+                  card={card}
+                  onClick={card ? setSelectedCardCode : undefined}
+                />
               </div>
             ))}
           </div>
@@ -250,7 +291,12 @@ export default function CardZone({
 
       case "stage": {
         const stage = cards[0] ?? null;
-        return <CardSlot card={stage} />;
+        return (
+          <CardSlot
+            card={stage}
+            onClick={stage ? setSelectedCardCode : undefined}
+          />
+        );
       }
 
       case "don": {
@@ -306,20 +352,27 @@ export default function CardZone({
   };
 
   return (
-    <div
-      className={`flex flex-col items-center gap-1 ${className}`}
-      data-variant={variant}
-      role="region"
-      aria-label={label}
-    >
-      <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
-        {label}
-      </span>
+    <>
       <div
-        className={`rounded-lg border ${borderColour} bg-gray-900 p-1.5`}
+        className={`flex flex-col items-center gap-1 ${className}`}
+        data-variant={variant}
+        role="region"
+        aria-label={label}
       >
-        {renderContent()}
+        <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+          {label}
+        </span>
+        <div
+          className={`rounded-lg border ${borderColour} bg-gray-900 p-1.5`}
+        >
+          {renderContent()}
+        </div>
       </div>
-    </div>
+
+      <CardDetailOverlay
+        cardCode={selectedCardCode}
+        onClose={() => setSelectedCardCode(null)}
+      />
+    </>
   );
 }

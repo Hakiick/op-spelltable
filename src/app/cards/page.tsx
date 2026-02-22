@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { getCards, getSets } from "@/lib/database/cards";
 import CardSearch from "@/components/cards/CardSearch";
 import CardFilters from "@/components/cards/CardFilters";
-import CardGrid from "@/components/cards/CardGrid";
+import CardGridWithOverlay from "@/components/cards/CardGridWithOverlay";
 import CardPagination from "@/components/cards/CardPagination";
 
 export const metadata: Metadata = {
@@ -70,7 +70,7 @@ export default async function CardsPage({ searchParams }: CardsPageProps) {
           </Suspense>
         </div>
 
-        <CardGrid cards={cards} />
+        <CardGridWithOverlay cards={cards} />
 
         <Suspense fallback={null}>
           <CardPagination
