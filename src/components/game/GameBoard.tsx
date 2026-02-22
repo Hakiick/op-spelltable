@@ -1,6 +1,7 @@
 "use client";
 
 import PlayerArea from "@/components/game/PlayerArea";
+import TurnPhaseIndicator from "@/components/game/TurnPhaseIndicator";
 import type { GamePhase, PlayerBoard } from "@/types/game";
 
 export interface GameBoardProps {
@@ -11,51 +12,8 @@ export interface GameBoardProps {
   gamePhase?: GamePhase;
   turnNumber?: number;
   isLocalTurn?: boolean;
+  onNextPhase?: () => void;
   className?: string;
-}
-
-const PHASE_LABELS: Record<GamePhase, string> = {
-  refresh: "Refresh",
-  draw: "Draw",
-  don: "DON!!",
-  main: "Main",
-  end: "End",
-};
-
-function PhaseIndicator({
-  phase,
-  turnNumber,
-  isLocalTurn,
-}: {
-  phase: GamePhase;
-  turnNumber: number;
-  isLocalTurn: boolean;
-}) {
-  return (
-    <div
-      className="flex items-center justify-between px-2 py-1"
-      aria-label={`Turn ${turnNumber}, ${PHASE_LABELS[phase]} phase`}
-      data-testid="phase-indicator"
-      role="status"
-      aria-live="polite"
-    >
-      <span className="text-xs text-gray-400">Turn {turnNumber}</span>
-      <div className="flex items-center gap-2">
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-            isLocalTurn
-              ? "bg-blue-600 text-white"
-              : "bg-gray-700 text-gray-300"
-          }`}
-        >
-          {PHASE_LABELS[phase]} Phase
-        </span>
-        {isLocalTurn && (
-          <span className="text-xs font-medium text-blue-400">Your turn</span>
-        )}
-      </div>
-    </div>
-  );
 }
 
 export default function GameBoard({
@@ -66,6 +24,7 @@ export default function GameBoard({
   gamePhase = "main",
   turnNumber = 1,
   isLocalTurn = false,
+  onNextPhase,
   className = "",
 }: GameBoardProps) {
   return (
@@ -75,10 +34,11 @@ export default function GameBoard({
     >
       {/* Phase indicator */}
       <div className="border-b border-gray-800 bg-gray-900">
-        <PhaseIndicator
+        <TurnPhaseIndicator
           phase={gamePhase}
           turnNumber={turnNumber}
           isLocalTurn={isLocalTurn}
+          onNextPhase={onNextPhase}
         />
       </div>
 

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import GameBoard from "@/components/game/GameBoard";
+import GameClient from "@/components/game/GameClient";
 import type { PlayerBoard } from "@/types/game";
 import type { CardData } from "@/types/card";
 
@@ -84,9 +84,9 @@ function createMockBoard(): PlayerBoard {
       makeMockCharacter("OP01-025", "Usopp", 2),
     ],
     stage: makeMockStage("OP01-116", "Thousand Sunny"),
-    donDeck: 4,
-    costArea: { active: 6, rested: 2 },
-    life: 4,
+    donDeck: 10,
+    costArea: { active: 0, rested: 0 },
+    life: 5,
     trash: [],
     deck: 35,
     hand: 5,
@@ -96,9 +96,9 @@ function createMockBoard(): PlayerBoard {
 export default async function GamePage({ params }: GamePageProps) {
   const { id } = await params;
 
-  const localBoard = createMockBoard();
+  const initialLocalBoard = createMockBoard();
 
-  // Opponent has slightly different state for demo
+  // Opponent board — static, not interactive from this client
   const opponentBoard: PlayerBoard = {
     ...createMockBoard(),
     leader: makeMockLeader("OP01-002", "Portgas D. Ace"),
@@ -115,19 +115,17 @@ export default async function GamePage({ params }: GamePageProps) {
 
   return (
     <main className="min-h-screen bg-gray-950">
-      {/* Game session debug info — only in dev, not rendered in production build check */}
+      {/* Game session debug info — only in dev */}
       <div className="sr-only" aria-hidden="true">
         Game session: {id}
       </div>
 
-      <GameBoard
-        localBoard={localBoard}
+      <GameClient
+        initialLocalBoard={initialLocalBoard}
         opponentBoard={opponentBoard}
         localPlayerName="You"
         opponentPlayerName="Opponent"
-        gamePhase="main"
-        turnNumber={3}
-        isLocalTurn={true}
+        sessionId={id}
       />
     </main>
   );
