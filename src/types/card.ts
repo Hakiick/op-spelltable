@@ -1,4 +1,4 @@
-export type CardColor =
+export type CardColorSingle =
   | "Red"
   | "Green"
   | "Blue"
@@ -6,9 +6,21 @@ export type CardColor =
   | "Black"
   | "Yellow";
 
+/** Single color or space-separated multi-color (e.g. "Red Green") */
+export type CardColor = CardColorSingle | string;
+
 export type CardType = "Leader" | "Character" | "Event" | "Stage" | "DON!!";
 
-export type CardRarity = "C" | "UC" | "R" | "SR" | "SEC" | "L" | "SP";
+export type CardRarity =
+  | "C"
+  | "UC"
+  | "R"
+  | "SR"
+  | "SEC"
+  | "L"
+  | "SP"
+  | "PR"
+  | "TR";
 
 export type CardAttribute =
   | "Strike"

@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const VALID_TYPES = new Set(["Leader", "Character", "Event", "Stage", "DON!!"]);
-const VALID_COLORS = new Set([
+const VALID_SINGLE_COLORS = new Set([
   "Red",
   "Green",
   "Blue",
@@ -15,7 +15,17 @@ const VALID_COLORS = new Set([
   "Black",
   "Yellow",
 ]);
-const VALID_RARITIES = new Set(["C", "UC", "R", "SR", "SEC", "L", "SP"]);
+const VALID_RARITIES = new Set([
+  "C",
+  "UC",
+  "R",
+  "SR",
+  "SEC",
+  "L",
+  "SP",
+  "PR",
+  "TR",
+]);
 
 interface RawCardSet {
   code: string;
@@ -47,9 +57,11 @@ function validateCard(card: RawCard, index: number): string[] {
       `Card[${index}] ${card.cardId}: invalid type "${card.type}". Valid: ${[...VALID_TYPES].join(", ")}`
     );
   }
-  if (!VALID_COLORS.has(card.color)) {
+  const colorParts = card.color.split(" ");
+  const invalidColors = colorParts.filter((c) => !VALID_SINGLE_COLORS.has(c));
+  if (invalidColors.length > 0) {
     errors.push(
-      `Card[${index}] ${card.cardId}: invalid color "${card.color}". Valid: ${[...VALID_COLORS].join(", ")}`
+      `Card[${index}] ${card.cardId}: invalid color(s) "${invalidColors.join(", ")}". Valid: ${[...VALID_SINGLE_COLORS].join(", ")}`
     );
   }
   if (!VALID_RARITIES.has(card.rarity)) {
