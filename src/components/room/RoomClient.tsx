@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import { useCamera } from "@/hooks/useCamera";
 import WebcamFeed from "@/components/video/WebcamFeed";
@@ -15,7 +16,13 @@ interface RoomClientProps {
   room: Pick<RoomRecord, "roomCode" | "hostPeerId" | "guestPeerId" | "status">;
 }
 
+interface RoomDetailResponse {
+  id: string;
+  roomCode: string;
+}
+
 export default function RoomClient({ room }: RoomClientProps) {
+  const router = useRouter();
   const { state, actions, isHost } = useWebRTC(room.roomCode);
   const camera = useCamera();
   const hasCalledRef = useRef(false);
@@ -26,6 +33,7 @@ export default function RoomClient({ room }: RoomClientProps) {
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // CRITIQUE-1: mute state
   const [isMuted, setIsMuted] = useState(false);
+  const [launchLoading, setLaunchLoading] = useState(false);
 
   // Start camera on mount
   useEffect(() => {
@@ -93,6 +101,29 @@ export default function RoomClient({ room }: RoomClientProps) {
     setIsMuted((prev) => !prev);
   };
 
+  // Launch game: PATCH room status to "playing", then navigate to /game/[id]
+  const handleLaunchGame = async () => {
+    setLaunchLoading(true);
+    try {
+      // PATCH status to "playing"
+      await fetch(`/api/rooms/${room.roomCode}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "playing" }),
+      });
+
+      // GET room to retrieve id
+      const response = await fetch(`/api/rooms/${room.roomCode}`);
+      if (response.ok) {
+        const data = (await response.json()) as RoomDetailResponse;
+        router.push(`/game/${data.id}`);
+      }
+    } catch {
+      // Navigation failure is non-blocking
+      setLaunchLoading(false);
+    }
+  };
+
   const localFeed = (
     <WebcamFeed
       stream={camera.stream}
@@ -115,6 +146,19 @@ export default function RoomClient({ room }: RoomClientProps) {
 
   const controls = (
     <>
+      {/* Launch game button — only when connected */}
+      {state.status === "connected" && (
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => void handleLaunchGame()}
+          disabled={launchLoading}
+          className="min-h-[44px] min-w-[44px] bg-green-600 hover:bg-green-700 text-white font-semibold disabled:opacity-60"
+          aria-label="Lancer la partie"
+        >
+          {launchLoading ? "Lancement..." : "Lancer la partie"}
+        </Button>
+      )}
       {/* CRITIQUE-1: Mute/unmute button */}
       <Button
         variant="outline"
