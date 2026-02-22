@@ -33,6 +33,20 @@ model Room {
   @@index([status])
 }
 
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  hashedPassword String
+  avatarUrl      String?
+  gamesPlayed    Int      @default(0)
+  gamesWon       Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([email])
+}
+
 model Card {
   id        String   @id @default(cuid())
   cardId    String   @unique // e.g. "OP01-001"
