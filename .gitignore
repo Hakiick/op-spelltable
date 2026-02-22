@@ -62,3 +62,10 @@ prisma/dev.db-journal
 
 # Logs
 *.log
+
+# Database files at root
+dev.db
+*.db-journal
+
+# TypeScript build info
+tsconfig.tsbuildinfo
