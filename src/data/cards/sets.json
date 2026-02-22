@@ -1,4 +1,170 @@
 [
-  { "code": "OP01", "name": "Romance Dawn", "releaseDate": "2022-12-02", "cardCount": 121 },
-  { "code": "ST01", "name": "Straw Hat Crew Starter Deck", "releaseDate": "2022-12-02", "cardCount": 17 }
+  {
+    "code": "EB01",
+    "name": "Extra Booster: Memorial Collection",
+    "releaseDate": null,
+    "cardCount": 61
+  },
+  {
+    "code": "OP01",
+    "name": "Romance Dawn",
+    "releaseDate": null,
+    "cardCount": 121
+  },
+  {
+    "code": "OP02",
+    "name": "Paramount War",
+    "releaseDate": null,
+    "cardCount": 121
+  },
+  {
+    "code": "OP03",
+    "name": "Pillars of Strength",
+    "releaseDate": null,
+    "cardCount": 127
+  },
+  {
+    "code": "OP04",
+    "name": "Kingdoms of Intrigue",
+    "releaseDate": null,
+    "cardCount": 130
+  },
+  {
+    "code": "OP05",
+    "name": "Awakening of the New Era",
+    "releaseDate": null,
+    "cardCount": 125
+  },
+  {
+    "code": "OP06",
+    "name": "Wings of the Captain",
+    "releaseDate": null,
+    "cardCount": 126
+  },
+  {
+    "code": "OP07",
+    "name": "500 Years in the Future",
+    "releaseDate": null,
+    "cardCount": 126
+  },
+  {
+    "code": "OP08",
+    "name": "Two Legends",
+    "releaseDate": null,
+    "cardCount": 126
+  },
+  {
+    "code": "OP09",
+    "name": "Emperors in the New World",
+    "releaseDate": null,
+    "cardCount": 127
+  },
+  {
+    "code": "ST01",
+    "name": "Starter Deck 1: Straw Hat Crew",
+    "releaseDate": null,
+    "cardCount": 17
+  },
+  {
+    "code": "ST02",
+    "name": "Starter Deck 2: Worst Generation",
+    "releaseDate": null,
+    "cardCount": 17
+  },
+  {
+    "code": "ST03",
+    "name": "Starter Deck 3: The Seven Warlords of The Sea",
+    "releaseDate": null,
+    "cardCount": 17
+  },
+  {
+    "code": "ST04",
+    "name": "Starter Deck 4: Animal Kingdom Pirates",
+    "releaseDate": null,
+    "cardCount": 17
+  },
+  {
+    "code": "ST05",
+    "name": "Starter Deck 5: Film Edition",
+    "releaseDate": null,
+    "cardCount": 17
+  },
+  {
+    "code": "ST06",
+    "name": "Starter Deck 6: Absolute Justice",
+    "releaseDate": null,
+    "cardCount": 17
+  },
+  {
+    "code": "ST07",
+    "name": "Starter Deck 7: Big Mom Pirates",
+    "releaseDate": null,
+    "cardCount": 17
+  },
+  {
+    "code": "ST08",
+    "name": "Starter Deck 8: Monkey.D.Luffy",
+    "releaseDate": null,
+    "cardCount": 15
+  },
+  {
+    "code": "ST09",
+    "name": "Starter Deck 9: Yamato",
+    "releaseDate": null,
+    "cardCount": 15
+  },
+  {
+    "code": "ST10",
+    "name": "Ultra Deck: The Three Captains",
+    "releaseDate": null,
+    "cardCount": 17
+  },
+  {
+    "code": "ST11",
+    "name": "Starter Deck 11: Uta",
+    "releaseDate": null,
+    "cardCount": 5
+  },
+  {
+    "code": "ST12",
+    "name": "Starter Deck 12: Zoro and Sanji",
+    "releaseDate": null,
+    "cardCount": 17
+  },
+  {
+    "code": "ST13",
+    "name": "Ultra Deck: The Three Brothers",
+    "releaseDate": null,
+    "cardCount": 19
+  },
+  {
+    "code": "ST14",
+    "name": "Starter Deck 14: 3D2Y",
+    "releaseDate": null,
+    "cardCount": 12
+  },
+  {
+    "code": "ST15",
+    "name": "Starter Deck 15: RED Edward.Newgate",
+    "releaseDate": null,
+    "cardCount": 13
+  },
+  {
+    "code": "ST16",
+    "name": "Starter Deck 16: GREEN Uta",
+    "releaseDate": null,
+    "cardCount": 15
+  },
+  {
+    "code": "ST17",
+    "name": "Starter Deck 17: BLUE Donquixote Doflamingo",
+    "releaseDate": null,
+    "cardCount": 10
+  },
+  {
+    "code": "ST18",
+    "name": "Starter Deck 18: PURPLE Monkey.D.Luffy",
+    "releaseDate": null,
+    "cardCount": 15
+  }
 ]
