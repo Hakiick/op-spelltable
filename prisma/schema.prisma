@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Card {
+  id        String   @id @default(cuid())
+  cardId    String   @unique // e.g. "OP01-001"
+  name      String
+  type      String // Leader, Character, Event, Stage
+  color     String // Red, Green, Blue, Purple, Black, Yellow
+  cost      Int?
+  power     Int?
+  counter   Int?
+  attribute String?
+  effect    String?
+  set       String // e.g. "OP01"
+  rarity    String // C, UC, R, SR, SEC, L, SP
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([set])
+  @@index([color])
+  @@index([type])
+}

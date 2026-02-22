@@ -55,5 +55,10 @@ config.env
 *.env
 !config.env.example
 
+# Prisma
+src/generated/
+prisma/dev.db
+prisma/dev.db-journal
+
 # Logs
 *.log

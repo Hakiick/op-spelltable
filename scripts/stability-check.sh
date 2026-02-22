@@ -14,13 +14,21 @@ warnings=0
 
 # 0. Vérifier que node_modules existe
 if [ ! -d "node_modules" ]; then
-  echo "[0/4] Installing dependencies..."
+  echo "[0/5] Installing dependencies..."
   npm install --silent 2>&1
   if [ $? -ne 0 ]; then
     echo "  ✗ npm install FAILED"
     exit 1
   fi
   echo "  ✓ Dependencies installed"
+  echo ""
+fi
+
+# 0b. Générer le client Prisma si nécessaire
+if [ -f "prisma/schema.prisma" ] && [ ! -d "src/generated/prisma" ]; then
+  echo "[0b] Generating Prisma client..."
+  npx prisma generate 2>&1 > /dev/null
+  echo "  ✓ Prisma client generated"
   echo ""
 fi
 
