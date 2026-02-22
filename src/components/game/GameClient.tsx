@@ -12,6 +12,7 @@ export interface GameClientProps {
   localPlayerName?: string;
   opponentPlayerName?: string;
   sessionId: string;
+  roomCode?: string;
 }
 
 export default function GameClient({

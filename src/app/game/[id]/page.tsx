@@ -1,5 +1,7 @@
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import GameClient from "@/components/game/GameClient";
+import { getRoomById } from "@/lib/database/rooms";
 import type { PlayerBoard } from "@/types/game";
 import type { CardData } from "@/types/card";
 
@@ -96,6 +98,12 @@ function createMockBoard(): PlayerBoard {
 export default async function GamePage({ params }: GamePageProps) {
   const { id } = await params;
 
+  // Fetch room by ID to verify it exists and get the roomCode
+  const room = await getRoomById(id);
+  if (!room) {
+    notFound();
+  }
+
   const initialLocalBoard = createMockBoard();
 
   // Opponent board — static, not interactive from this client
@@ -126,6 +134,7 @@ export default async function GamePage({ params }: GamePageProps) {
         localPlayerName="You"
         opponentPlayerName="Opponent"
         sessionId={id}
+        roomCode={room.roomCode}
       />
     </main>
   );
