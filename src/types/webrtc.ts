@@ -5,7 +5,7 @@ export type ConnectionStatus =
   | "disconnected"
   | "failed";
 
-export type RoomStatus = "waiting" | "ready" | "closed";
+export type RoomStatus = "waiting" | "ready" | "playing" | "closed";
 
 export interface RoomRecord {
   id: string;
