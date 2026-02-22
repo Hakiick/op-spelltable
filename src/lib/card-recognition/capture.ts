@@ -10,10 +10,15 @@ export interface CaptureResult {
 /**
  * Captures a single frame from a video element, optionally cropped to a region.
  * Returns null if the video is not ready (readyState < HAVE_CURRENT_DATA).
+ *
+ * @param reusableCanvas - Optional pre-created canvas to reuse across calls,
+ *   reducing GC pressure in tight loops (e.g., the recognition RAF loop).
+ *   If not provided, a new canvas is created for each call.
  */
 export function captureFrame(
   video: HTMLVideoElement,
-  crop?: CropRegion
+  crop?: CropRegion,
+  reusableCanvas?: HTMLCanvasElement | OffscreenCanvas
 ): CaptureResult | null {
   // HTMLMediaElement.HAVE_CURRENT_DATA = 2
   if (video.readyState < 2) {
@@ -32,7 +37,8 @@ export function captureFrame(
   const sw = crop ? crop.width : sourceWidth;
   const sh = crop ? crop.height : sourceHeight;
 
-  const canvas = document.createElement("canvas");
+  const canvas: HTMLCanvasElement | OffscreenCanvas =
+    reusableCanvas ?? document.createElement("canvas");
   canvas.width = sw;
   canvas.height = sh;
 

@@ -65,13 +65,17 @@ export function createRecognitionLoop(): RecognitionLoop {
     frameCount = 0;
     completionTimestamps.length = 0;
 
+    // Create a single canvas to reuse across all frames, avoiding per-frame
+    // allocations and GC pressure (especially noticeable on mobile).
+    const reusableCanvas = document.createElement("canvas");
+
     const loop = (): void => {
       if (!running) return;
 
       frameCount++;
 
       if (frameCount % config.frameSkip === 0) {
-        const capture = captureFrame(video, crop);
+        const capture = captureFrame(video, crop, reusableCanvas);
         if (capture) {
           callbacks.onFrame(capture.imageData);
           recordCompletion(callbacks);

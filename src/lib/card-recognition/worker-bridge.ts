@@ -180,7 +180,9 @@ export function createWorkerBridge(
       return new Promise<{ result: RecognitionOutput; fps: number }>(
         (resolve, reject) => {
           const handleMessage = (event: MessageEvent<WorkerResponse>): void => {
+            clearTimeout(timeout);
             w.removeEventListener("message", handleMessage);
+            w.removeEventListener("error", onError);
             if (event.data.type === "result") {
               resolve({ result: event.data.data, fps: event.data.fps });
             } else if (event.data.type === "error") {
@@ -188,7 +190,21 @@ export function createWorkerBridge(
             }
           };
 
+          const onError = (e: ErrorEvent): void => {
+            clearTimeout(timeout);
+            w.removeEventListener("message", handleMessage);
+            w.removeEventListener("error", onError);
+            reject(new Error(e.message ?? "Worker error during recognition"));
+          };
+
+          const timeout = setTimeout(() => {
+            w.removeEventListener("message", handleMessage);
+            w.removeEventListener("error", onError);
+            reject(new Error("Worker recognition timeout"));
+          }, 5000);
+
           w.addEventListener("message", handleMessage);
+          w.addEventListener("error", onError);
 
           const msg: WorkerMessage = {
             type: "recognize",

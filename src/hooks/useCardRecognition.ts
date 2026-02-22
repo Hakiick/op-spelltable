@@ -50,6 +50,8 @@ export function useCardRecognition(
   const bridgeRef = useRef<WorkerBridge | null>(null);
   const loopRef = useRef<RecognitionLoop | null>(null);
   const isActiveRef = useRef(false);
+  const initializedRef = useRef(false);
+  const recognizingRef = useRef(false);
   const [isUsingWorker, setIsUsingWorker] = useState(false);
 
   const [config, setConfigState] = useState<RecognitionConfig>(DEFAULT_CONFIG);
@@ -78,8 +80,12 @@ export function useCardRecognition(
     return loopRef.current;
   }, []);
 
-  // Initialize the bridge (loads model + embeddings)
+  // Initialize the bridge (loads model + embeddings).
+  // Guarded by initializedRef so repeated calls (start + recognizeOnce)
+  // skip re-initialization and avoid creating orphaned workers.
   const initialize = useCallback(async (): Promise<boolean> => {
+    if (initializedRef.current) return true;
+
     const bridge = getBridge();
 
     setState((prev) => ({ ...prev, status: "loading", loadingProgress: 0 }));
@@ -90,6 +96,7 @@ export function useCardRecognition(
         embeddingsUrl ?? DEFAULT_EMBEDDINGS_URL
       );
       setIsUsingWorker(bridge.isUsingWorker());
+      initializedRef.current = true;
       setState((prev) => ({
         ...prev,
         status: "ready",
@@ -139,10 +146,16 @@ export function useCardRecognition(
         currentConfig,
         {
           onFrame: (imageData: ImageData) => {
+            // Skip if a previous recognition is still in flight to prevent
+            // race conditions, out-of-order state updates, and memory pressure.
+            if (recognizingRef.current) return;
+            recognizingRef.current = true;
+
             setState((prev) => ({ ...prev, status: "processing" }));
 
             void bridge.recognize(imageData, currentConfig).then(
               ({ result, fps }) => {
+                recognizingRef.current = false;
                 const candidates: RecognitionResult[] =
                   result.cardCode !== null
                     ? [result as RecognitionResult]
@@ -156,6 +169,7 @@ export function useCardRecognition(
                 }));
               },
               (err: unknown) => {
+                recognizingRef.current = false;
                 const message =
                   err instanceof Error ? err.message : "Recognition error";
                 setState((prev) => ({
@@ -246,6 +260,8 @@ export function useCardRecognition(
   useEffect(() => {
     return () => {
       isActiveRef.current = false;
+      recognizingRef.current = false;
+      initializedRef.current = false;
       if (loopRef.current) {
         loopRef.current.stop();
         loopRef.current = null;
