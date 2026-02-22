@@ -13,8 +13,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CARDS_DIR = join(__dirname, "../src/data/cards");
 const BASE_URL = "https://www.optcgapi.com/api";
 
-// Target sets to fetch
-const OP_SETS = [
+// All available sets
+const BOOSTER_SETS = [
   "OP-01",
   "OP-02",
   "OP-03",
@@ -24,8 +24,17 @@ const OP_SETS = [
   "OP-07",
   "OP-08",
   "OP-09",
+  "OP-10",
+  "OP-11",
+  "OP-12",
+  "OP-13",
+  "OP14-EB04",
+  "EB-01",
+  "EB-02",
+  "EB-03",
+  "PRB-01",
+  "PRB-02",
 ];
-const EB_SETS = ["EB-01"];
 const ST_SETS = [
   "ST-01",
   "ST-02",
@@ -45,6 +54,16 @@ const ST_SETS = [
   "ST-16",
   "ST-17",
   "ST-18",
+  "ST-19",
+  "ST-20",
+  "ST-21",
+  "ST-22",
+  "ST-23",
+  "ST-24",
+  "ST-25",
+  "ST-26",
+  "ST-27",
+  "ST-28",
 ];
 
 interface ApiCard {
@@ -102,7 +121,14 @@ function parseNullableNumber(val: string | null | undefined): number | null {
 
 function normalizeSetCode(apiSetId: string): string {
   // "OP-01" → "OP01", "ST-02" → "ST02", "EB-01" → "EB01"
-  return apiSetId.replace("-", "");
+  // "OP14-EB04" stays as "OP14-EB04" (combined set)
+  if (apiSetId.includes("-") && apiSetId.split("-").length === 2) {
+    const [prefix, suffix] = apiSetId.split("-");
+    // Combined sets like "OP14-EB04" have alpha chars in the suffix
+    if (/^[A-Z]/.test(suffix)) return apiSetId;
+    return prefix + suffix;
+  }
+  return apiSetId;
 }
 
 function transformCard(card: ApiCard): OutputCard {
@@ -192,8 +218,7 @@ async function main(): Promise<void> {
 
   const allSets: SetInfo[] = [];
   const allSetIds = [
-    ...OP_SETS.map((id) => ({ id, endpoint: "sets" as const })),
-    ...EB_SETS.map((id) => ({ id, endpoint: "sets" as const })),
+    ...BOOSTER_SETS.map((id) => ({ id, endpoint: "sets" as const })),
     ...ST_SETS.map((id) => ({ id, endpoint: "decks" as const })),
   ];
 
