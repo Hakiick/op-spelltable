@@ -36,6 +36,8 @@ function PhaseIndicator({
       className="flex items-center justify-between px-2 py-1"
       aria-label={`Turn ${turnNumber}, ${PHASE_LABELS[phase]} phase`}
       data-testid="phase-indicator"
+      role="status"
+      aria-live="polite"
     >
       <span className="text-xs text-gray-400">Turn {turnNumber}</span>
       <div className="flex items-center gap-2">
@@ -68,7 +70,7 @@ export default function GameBoard({
 }: GameBoardProps) {
   return (
     <div
-      className={`flex min-h-screen flex-col bg-gray-950 text-white ${className}`}
+      className={`flex min-h-dvh flex-col bg-gray-950 text-white ${className}`}
       data-testid="game-board"
     >
       {/* Phase indicator */}

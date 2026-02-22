@@ -81,6 +81,10 @@ export default function PlayerArea({
     ? [fieldRow, charactersRow, resourceRow]
     : [resourceRow, charactersRow, fieldRow];
 
+  const rowKeys = isOpponent
+    ? ["field", "characters", "resources"]
+    : ["resources", "characters", "field"];
+
   return (
     <div
       className={`flex flex-col gap-2 ${className}`}
@@ -101,7 +105,7 @@ export default function PlayerArea({
       {/* Zone rows */}
       <div className="flex flex-col gap-2">
         {rows.map((row, i) => (
-          <div key={i}>{row}</div>
+          <div key={rowKeys[i]}>{row}</div>
         ))}
       </div>
 

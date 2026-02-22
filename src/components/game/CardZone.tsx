@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { CardData } from "@/types/card";
 
 export type CardZoneVariant =
@@ -69,16 +70,17 @@ function CardSlot({
 
   return (
     <div
-      className="h-16 w-12 overflow-hidden rounded border border-gray-500 bg-gray-800 md:h-24 md:w-16"
+      className="relative h-16 w-12 overflow-hidden rounded border border-gray-500 bg-gray-800 md:h-24 md:w-16"
       title={card.name}
       aria-label={card.name}
     >
       {card.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={card.imageUrl}
           alt={card.name}
-          className="h-full w-full object-cover"
+          fill
+          className="object-cover"
+          unoptimized
         />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-1">
@@ -95,13 +97,16 @@ function CardSlot({
 // ── Pile indicator ───────────────────────────────────────────────────────────
 function PileIndicator({
   count,
+  displayLabel,
   icon,
   label,
 }: {
-  count: number;
+  count?: number;
+  displayLabel?: string;
   icon: React.ReactNode;
   label: string;
 }) {
+  const display = displayLabel ?? String(count ?? 0);
   return (
     <div
       className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1"
@@ -110,7 +115,7 @@ function PileIndicator({
       <span className="text-gray-400" aria-hidden="true">
         {icon}
       </span>
-      <span className="text-lg font-bold text-white">{count}</span>
+      <span className="text-lg font-bold text-white">{display}</span>
     </div>
   );
 }
@@ -196,14 +201,15 @@ export default function CardZone({
         const leader = cards[0] ?? null;
         return (
           <div className="flex flex-col items-center gap-1">
-            <div className="h-20 w-14 overflow-hidden rounded border-2 border-amber-500 bg-gray-800 md:h-28 md:w-20">
+            <div className="relative h-20 w-14 overflow-hidden rounded border-2 border-amber-500 bg-gray-800 md:h-28 md:w-20">
               {leader ? (
                 leader.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={leader.imageUrl}
                     alt={leader.name}
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-1">
@@ -234,7 +240,7 @@ export default function CardZone({
         return (
           <div className="flex gap-1" role="list" aria-label="Character area">
             {slots.map((card, i) => (
-              <div key={i} role="listitem">
+              <div key={card ? card.id : `empty-slot-${i}`} role="listitem">
                 <CardSlot card={card} />
               </div>
             ))}
@@ -266,11 +272,13 @@ export default function CardZone({
       }
 
       case "life": {
+        // Opponent's life cards are face-down — don't reveal exact count
         return (
           <PileIndicator
-            count={isOpponent ? life : life}
+            count={isOpponent ? undefined : life}
+            displayLabel={isOpponent ? "?" : String(life)}
             icon={<ShieldIcon />}
-            label={`Life: ${life} cards`}
+            label={isOpponent ? "Life: hidden" : `Life: ${life} cards`}
           />
         );
       }
@@ -301,6 +309,8 @@ export default function CardZone({
     <div
       className={`flex flex-col items-center gap-1 ${className}`}
       data-variant={variant}
+      role="region"
+      aria-label={label}
     >
       <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
         {label}
