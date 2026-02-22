@@ -33,6 +33,12 @@ export function Navbar() {
 
       {/* Desktop right side */}
       <div className="hidden md:flex items-center gap-3">
+        <Link
+          href="/lobby"
+          className="text-sm text-gray-300 hover:text-white transition-colors px-2 py-1 min-h-11 inline-flex items-center"
+        >
+          Lobby
+        </Link>
         {isLoading ? (
           <div className="h-8 w-8 animate-pulse rounded-full bg-gray-700" />
         ) : session?.user ? (
@@ -130,42 +136,51 @@ export function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="absolute inset-x-0 top-14 z-50 border-b border-gray-800 bg-gray-950 px-4 py-3 md:hidden">
-          {isLoading ? null : session?.user ? (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-3 px-2 py-2">
-                <UserAvatar
-                  name={session.user.name}
-                  avatarUrl={session.user.image ?? null}
-                  size="sm"
-                />
-                <span className="text-sm text-gray-200">{session.user.name}</span>
-              </div>
-              <Link
-                href="/profile"
-                className="block rounded-md px-2 py-2 text-sm text-gray-200 hover:bg-gray-800 transition-colors"
-                onClick={() => setMenuOpen(false)}
-              >
-                Profile
-              </Link>
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  void signOut({ callbackUrl: "/" });
-                }}
-                className="block w-full rounded-md px-2 py-2 text-left text-sm text-gray-200 hover:bg-gray-800 transition-colors"
-              >
-                Sign out
-              </button>
-            </div>
-          ) : (
+          <div className="flex flex-col gap-1">
             <Link
-              href="/auth/login"
+              href="/lobby"
               className="block rounded-md px-2 py-2 text-sm text-gray-200 hover:bg-gray-800 transition-colors"
               onClick={() => setMenuOpen(false)}
             >
-              Login
+              Lobby
             </Link>
-          )}
+            {isLoading ? null : session?.user ? (
+              <>
+                <div className="flex items-center gap-3 px-2 py-2">
+                  <UserAvatar
+                    name={session.user.name}
+                    avatarUrl={session.user.image ?? null}
+                    size="sm"
+                  />
+                  <span className="text-sm text-gray-200">{session.user.name}</span>
+                </div>
+                <Link
+                  href="/profile"
+                  className="block rounded-md px-2 py-2 text-sm text-gray-200 hover:bg-gray-800 transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void signOut({ callbackUrl: "/" });
+                  }}
+                  className="block w-full rounded-md px-2 py-2 text-left text-sm text-gray-200 hover:bg-gray-800 transition-colors"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/auth/login"
+                className="block rounded-md px-2 py-2 text-sm text-gray-200 hover:bg-gray-800 transition-colors"
+                onClick={() => setMenuOpen(false)}
+              >
+                Login
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </nav>

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-8">
@@ -9,13 +11,19 @@ export default function Home() {
           Play the One Piece Trading Card Game remotely via webcam with
           real-time card recognition.
         </p>
-        <div className="flex gap-4">
-          <button className="rounded-lg bg-red-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-red-700">
-            Play Now
-          </button>
-          <button className="rounded-lg border border-gray-300 px-6 py-3 font-semibold transition-colors hover:bg-gray-50">
-            Browse Cards
-          </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+          <Link
+            href="/lobby"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-red-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+          >
+            Jouer maintenant
+          </Link>
+          <Link
+            href="/cards"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-gray-300 px-6 py-3 font-semibold transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
+          >
+            Parcourir les cartes
+          </Link>
         </div>
       </main>
     </div>
