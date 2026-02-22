@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRoom } from "@/lib/database/rooms";
+import { auth } from "@/lib/auth";
 
 interface CreateRoomBody {
   hostPeerId?: string;
+  name?: string;
+  isPublic?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -17,7 +20,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const room = await createRoom(body.hostPeerId);
+    // Read optional authenticated user id — not blocking if not authenticated
+    let hostUserId: string | undefined;
+    try {
+      const session = await auth();
+      if (session?.user?.id) {
+        hostUserId = session.user.id;
+      }
+    } catch {
+      // Session read failures are non-blocking
+    }
+
+    const room = await createRoom(body.hostPeerId, {
+      name: body.name,
+      isPublic: body.isPublic,
+      hostUserId,
+    });
 
     return NextResponse.json(
       {
@@ -25,6 +43,8 @@ export async function POST(request: NextRequest) {
         roomCode: room.roomCode,
         status: room.status,
         hostPeerId: room.hostPeerId,
+        name: room.name,
+        isPublic: room.isPublic,
         createdAt: room.createdAt,
       },
       { status: 201 }
