@@ -5,39 +5,68 @@ import { useEffect, useRef, useState } from "react";
 type FeedState = "loading" | "active" | "error";
 
 interface WebcamFeedProps {
-  onStream: (stream: MediaStream) => void;
+  onStream?: (stream: MediaStream) => void;
+  stream?: MediaStream | null;
+  mirror?: boolean;
   className?: string;
 }
 
-export default function WebcamFeed({ onStream, className = "" }: WebcamFeedProps) {
+export default function WebcamFeed({
+  onStream,
+  stream: externalStream,
+  mirror = true,
+  className = "",
+}: WebcamFeedProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const internalStreamRef = useRef<MediaStream | null>(null);
   const [feedState, setFeedState] = useState<FeedState>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  const isControlled = externalStream !== undefined;
+
+  // Controlled mode: use the provided external stream
   useEffect(() => {
+    if (!isControlled) return;
+
+    if (externalStream) {
+      if (videoRef.current) {
+        videoRef.current.srcObject = externalStream;
+      }
+      setFeedState("active");
+    } else {
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      setFeedState("loading");
+    }
+  }, [externalStream, isControlled]);
+
+  // Standalone mode: start the camera internally
+  useEffect(() => {
+    if (isControlled) return;
+
     let cancelled = false;
 
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user" },
           audio: true,
         });
 
         if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
+          mediaStream.getTracks().forEach((t) => t.stop());
           return;
         }
 
-        streamRef.current = stream;
+        internalStreamRef.current = mediaStream;
 
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+          videoRef.current.srcObject = mediaStream;
         }
 
         setFeedState("active");
-        onStream(stream);
+        onStream?.(mediaStream);
       } catch (err) {
         if (cancelled) return;
 
@@ -63,13 +92,13 @@ export default function WebcamFeed({ onStream, className = "" }: WebcamFeedProps
 
     return () => {
       cancelled = true;
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
+      if (internalStreamRef.current) {
+        internalStreamRef.current.getTracks().forEach((t) => t.stop());
+        internalStreamRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isControlled]);
 
   return (
     <div
@@ -84,7 +113,7 @@ export default function WebcamFeed({ onStream, className = "" }: WebcamFeedProps
         playsInline
         className={`h-full w-full object-cover transition-opacity duration-300 ${
           feedState === "active" ? "opacity-100" : "opacity-0"
-        }`}
+        } ${mirror ? "-scale-x-100" : ""}`}
         aria-label="Your webcam"
       />
 
