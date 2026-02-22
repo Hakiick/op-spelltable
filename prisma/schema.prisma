@@ -7,6 +7,19 @@ datasource db {
   provider = "sqlite"
 }
 
+model CardSet {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  name        String
+  releaseDate DateTime?
+  cardCount   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  cards       Card[]
+
+  @@index([code])
+}
+
 model Card {
   id        String   @id @default(cuid())
   cardId    String   @unique // e.g. "OP01-001"
@@ -18,13 +31,18 @@ model Card {
   counter   Int?
   attribute String?
   effect    String?
-  set       String // e.g. "OP01"
+  life      Int? // for Leaders
+  setCode   String // e.g. "OP01"
   rarity    String // C, UC, R, SR, SEC, L, SP
   imageUrl  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([set])
+  set CardSet @relation(fields: [setCode], references: [code])
+
+  @@index([setCode])
+  @@index([name])
+  @@index([cost])
   @@index([color])
   @@index([type])
 }
