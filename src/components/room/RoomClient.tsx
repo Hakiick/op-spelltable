@@ -2,9 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useWebRTC } from "@/hooks/useWebRTC";
+import { useCamera } from "@/hooks/useCamera";
 import WebcamFeed from "@/components/video/WebcamFeed";
 import PeerVideo from "@/components/video/PeerVideo";
 import ConnectionStatus from "@/components/video/ConnectionStatus";
+import CameraSetup from "@/components/video/CameraSetup";
+import VideoLayout from "@/components/video/VideoLayout";
 import { Button } from "@/components/ui/button";
 import type { RoomRecord } from "@/types/webrtc";
 
@@ -14,37 +17,38 @@ interface RoomClientProps {
 
 export default function RoomClient({ room }: RoomClientProps) {
   const { state, actions, isHost } = useWebRTC(room.roomCode);
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const camera = useCamera();
   const hasCalledRef = useRef(false);
   const [copied, setCopied] = useState(false);
+
+  // Start camera on mount
+  useEffect(() => {
+    void camera.startCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // When we have a local stream AND a remote peer ID → auto-call (host only)
   useEffect(() => {
     if (
       isHost &&
-      localStream &&
+      camera.stream &&
       state.remotePeerId &&
       !hasCalledRef.current &&
       state.status !== "connected"
     ) {
       hasCalledRef.current = true;
-      actions.call(localStream);
+      actions.call(camera.stream);
     }
-  }, [isHost, localStream, state.remotePeerId, state.status, actions]);
+  }, [isHost, camera.stream, state.remotePeerId, state.status, actions]);
 
   // Guest: when we have a local stream, store it so it's ready to answer
   useEffect(() => {
-    if (!isHost && localStream) {
-      actions.answer(localStream);
+    if (!isHost && camera.stream) {
+      actions.answer(camera.stream);
     }
-    // Only run when localStream changes
+    // Only run when camera.stream changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localStream]);
-
-  const handleStream = (stream: MediaStream) => {
-    setLocalStream(stream);
-    // Also update the state in the hook so it can answer calls
-  };
+  }, [camera.stream]);
 
   const handleCopyCode = async () => {
     try {
@@ -57,8 +61,50 @@ export default function RoomClient({ room }: RoomClientProps) {
   };
 
   const handleDisconnect = () => {
+    camera.stopCamera();
     void actions.disconnect();
   };
+
+  const localFeed = (
+    <WebcamFeed
+      stream={camera.stream}
+      mirror={camera.settings.mirror}
+      className="h-full w-full"
+    />
+  );
+
+  const remoteFeed = (
+    <PeerVideo
+      stream={state.remoteStream}
+      label="Opponent"
+      className="h-full w-full"
+    />
+  );
+
+  const statusBar = (
+    <ConnectionStatus status={state.status} error={state.error} />
+  );
+
+  const controls = (
+    <>
+      <CameraSetup
+        devices={camera.devices}
+        settings={camera.settings}
+        stream={camera.stream}
+        onUpdateSettings={camera.updateSettings}
+        onApply={camera.startCamera}
+      />
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={handleDisconnect}
+        className="min-h-[44px] min-w-[44px]"
+        aria-label="Leave room"
+      >
+        Leave
+      </Button>
+    </>
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-950 text-white">
@@ -121,18 +167,12 @@ export default function RoomClient({ room }: RoomClientProps) {
       </div>
 
       {/* Video grid */}
-      <main className="flex flex-1 flex-col gap-4 p-4 md:flex-row md:p-6">
-        {/* Local feed */}
-        <WebcamFeed
-          onStream={handleStream}
-          className="aspect-video w-full md:flex-1"
-        />
-
-        {/* Remote feed */}
-        <PeerVideo
-          stream={state.remoteStream}
-          label="Opponent"
-          className="aspect-video w-full md:flex-1"
+      <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+        <VideoLayout
+          localFeed={localFeed}
+          remoteFeed={remoteFeed}
+          statusBar={statusBar}
+          controls={controls}
         />
       </main>
 
