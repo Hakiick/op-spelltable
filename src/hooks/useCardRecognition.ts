@@ -1,8 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createCardRecognizer } from "@/lib/card-recognition/identify";
-import type { CardRecognizer } from "@/lib/card-recognition/identify";
+import {
+  createWorkerBridge,
+  type WorkerBridge,
+} from "@/lib/card-recognition/worker-bridge";
+import {
+  createRecognitionLoop,
+  type RecognitionLoop,
+} from "@/lib/card-recognition/recognition-loop";
+import { captureFrame } from "@/lib/card-recognition/capture";
 import type {
   CardRecognitionState,
   RecognitionConfig,
@@ -17,6 +24,10 @@ const DEFAULT_CONFIG: RecognitionConfig = {
   frameSkip: 5,
 };
 
+const DEFAULT_MODEL_URL =
+  "https://tfhub.dev/google/tfjs-model/imagenet/mobilenet_v3_small_100_224/feature_vector/5/default/1";
+const DEFAULT_EMBEDDINGS_URL = "/ml/embeddings-OP01.json";
+
 export interface UseCardRecognitionReturn {
   state: CardRecognitionState;
   start: (
@@ -29,16 +40,17 @@ export interface UseCardRecognitionReturn {
     crop?: CropRegion
   ) => Promise<void>;
   setConfig: (partial: Partial<RecognitionConfig>) => void;
+  isUsingWorker: boolean;
 }
 
 export function useCardRecognition(
   modelUrl?: string,
   embeddingsUrl?: string
 ): UseCardRecognitionReturn {
-  const recognizerRef = useRef<CardRecognizer | null>(null);
-  const rafIdRef = useRef<number | null>(null);
-  const frameCountRef = useRef(0);
+  const bridgeRef = useRef<WorkerBridge | null>(null);
+  const loopRef = useRef<RecognitionLoop | null>(null);
   const isActiveRef = useRef(false);
+  const [isUsingWorker, setIsUsingWorker] = useState(false);
 
   const [config, setConfigState] = useState<RecognitionConfig>(DEFAULT_CONFIG);
 
@@ -49,25 +61,35 @@ export function useCardRecognition(
     error: null,
     isActive: false,
     loadingProgress: 0,
+    fps: 0,
   });
 
-  // Ensure we have a recognizer instance
-  const getRecognizer = useCallback((): CardRecognizer => {
-    if (!recognizerRef.current) {
-      recognizerRef.current = createCardRecognizer();
+  const getBridge = useCallback((): WorkerBridge => {
+    if (!bridgeRef.current) {
+      bridgeRef.current = createWorkerBridge();
     }
-    return recognizerRef.current;
+    return bridgeRef.current;
   }, []);
 
-  // Initialize the pipeline (load model + embeddings)
+  const getLoop = useCallback((): RecognitionLoop => {
+    if (!loopRef.current) {
+      loopRef.current = createRecognitionLoop();
+    }
+    return loopRef.current;
+  }, []);
+
+  // Initialize the bridge (loads model + embeddings)
   const initialize = useCallback(async (): Promise<boolean> => {
-    const recognizer = getRecognizer();
-    if (recognizer.isReady) return true;
+    const bridge = getBridge();
 
     setState((prev) => ({ ...prev, status: "loading", loadingProgress: 0 }));
 
     try {
-      await recognizer.initialize(modelUrl, embeddingsUrl);
+      await bridge.initialize(
+        modelUrl ?? DEFAULT_MODEL_URL,
+        embeddingsUrl ?? DEFAULT_EMBEDDINGS_URL
+      );
+      setIsUsingWorker(bridge.isUsingWorker());
       setState((prev) => ({
         ...prev,
         status: "ready",
@@ -86,7 +108,7 @@ export function useCardRecognition(
       }));
       return false;
     }
-  }, [getRecognizer, modelUrl, embeddingsUrl]);
+  }, [getBridge, modelUrl, embeddingsUrl]);
 
   const start = useCallback(
     async (
@@ -98,67 +120,67 @@ export function useCardRecognition(
       const ready = await initialize();
       if (!ready) return;
 
-      isActiveRef.current = true;
-      frameCountRef.current = 0;
+      const video = videoRef.current;
+      if (!video) {
+        isActiveRef.current = false;
+        setState((prev) => ({ ...prev, isActive: false, status: "ready" }));
+        return;
+      }
 
+      isActiveRef.current = true;
       setState((prev) => ({ ...prev, isActive: true, status: "ready" }));
 
-      const loop = async (): Promise<void> => {
-        if (!isActiveRef.current) return;
+      const bridge = getBridge();
+      const loop = getLoop();
+      const currentConfig = config;
 
-        frameCountRef.current++;
-
-        // Skip frames according to config
-        if (frameCountRef.current % config.frameSkip === 0) {
-          const video = videoRef.current;
-          if (video) {
+      loop.start(
+        video,
+        currentConfig,
+        {
+          onFrame: (imageData: ImageData) => {
             setState((prev) => ({ ...prev, status: "processing" }));
-            try {
-              const recognizer = getRecognizer();
-              const result = await recognizer.recognize(video, config, crop);
-              const candidates: RecognitionResult[] =
-                result.cardCode !== null
-                  ? [result as RecognitionResult]
-                  : [];
 
-              setState((prev) => ({
-                ...prev,
-                status: "ready",
-                lastResult: result,
-                topCandidates: candidates,
-              }));
-            } catch (err) {
-              const message =
-                err instanceof Error ? err.message : "Recognition error";
-              setState((prev) => ({
-                ...prev,
-                status: "error",
-                error: message,
-              }));
-            }
-          }
-        }
-
-        if (isActiveRef.current) {
-          rafIdRef.current = requestAnimationFrame(() => {
-            void loop();
-          });
-        }
-      };
-
-      rafIdRef.current = requestAnimationFrame(() => {
-        void loop();
-      });
+            void bridge.recognize(imageData, currentConfig).then(
+              ({ result, fps }) => {
+                const candidates: RecognitionResult[] =
+                  result.cardCode !== null
+                    ? [result as RecognitionResult]
+                    : [];
+                setState((prev) => ({
+                  ...prev,
+                  status: "ready",
+                  lastResult: result,
+                  topCandidates: candidates,
+                  fps,
+                }));
+              },
+              (err: unknown) => {
+                const message =
+                  err instanceof Error ? err.message : "Recognition error";
+                setState((prev) => ({
+                  ...prev,
+                  status: "error",
+                  error: message,
+                }));
+              }
+            );
+          },
+          onFpsUpdate: (fps: number) => {
+            setState((prev) => ({ ...prev, fps }));
+          },
+        },
+        crop
+      );
     },
-    [config, getRecognizer, initialize]
+    [config, getBridge, getLoop, initialize]
   );
 
   const stop = useCallback((): void => {
     isActiveRef.current = false;
 
-    if (rafIdRef.current !== null) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = null;
+    if (loopRef.current) {
+      loopRef.current.stop();
     }
 
     setState((prev) => ({
@@ -182,8 +204,17 @@ export function useCardRecognition(
       setState((prev) => ({ ...prev, status: "processing" }));
 
       try {
-        const recognizer = getRecognizer();
-        const result = await recognizer.recognize(video, config, crop);
+        const capture = captureFrame(video, crop);
+        if (!capture) {
+          setState((prev) => ({ ...prev, status: "ready" }));
+          return;
+        }
+
+        const bridge = getBridge();
+        const { result, fps } = await bridge.recognize(
+          capture.imageData,
+          config
+        );
         const candidates: RecognitionResult[] =
           result.cardCode !== null ? [result as RecognitionResult] : [];
 
@@ -192,6 +223,7 @@ export function useCardRecognition(
           status: "ready",
           lastResult: result,
           topCandidates: candidates,
+          fps,
         }));
       } catch (err) {
         const message =
@@ -203,7 +235,7 @@ export function useCardRecognition(
         }));
       }
     },
-    [config, getRecognizer, initialize]
+    [config, getBridge, initialize]
   );
 
   const setConfig = useCallback((partial: Partial<RecognitionConfig>): void => {
@@ -214,16 +246,16 @@ export function useCardRecognition(
   useEffect(() => {
     return () => {
       isActiveRef.current = false;
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
+      if (loopRef.current) {
+        loopRef.current.stop();
+        loopRef.current = null;
       }
-      if (recognizerRef.current) {
-        recognizerRef.current.dispose();
-        recognizerRef.current = null;
+      if (bridgeRef.current) {
+        bridgeRef.current.dispose();
+        bridgeRef.current = null;
       }
     };
   }, []);
 
-  return { state, start, stop, recognizeOnce, setConfig };
+  return { state, start, stop, recognizeOnce, setConfig, isUsingWorker };
 }
