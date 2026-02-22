@@ -19,12 +19,27 @@ export default function RoomClient({ room }: RoomClientProps) {
   const { state, actions, isHost } = useWebRTC(room.roomCode);
   const camera = useCamera();
   const hasCalledRef = useRef(false);
+  // CRITIQUE-3: guard to prevent double-answer on stream changes
+  const hasAnsweredRef = useRef(false);
   const [copied, setCopied] = useState(false);
+  // CRITIQUE-2: store timeout ID so we can clear it on unmount
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // CRITIQUE-1: mute state
+  const [isMuted, setIsMuted] = useState(false);
 
   // Start camera on mount
   useEffect(() => {
     void camera.startCamera();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // CRITIQUE-2: clear the copy timeout on unmount to prevent state updates after unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current !== null) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
   }, []);
 
   // When we have a local stream AND a remote peer ID → auto-call (host only)
@@ -41,9 +56,11 @@ export default function RoomClient({ room }: RoomClientProps) {
     }
   }, [isHost, camera.stream, state.remotePeerId, state.status, actions]);
 
-  // Guest: when we have a local stream, store it so it's ready to answer
+  // CRITIQUE-3: Guest: answer only once. hasAnsweredRef prevents double-answer
+  // on subsequent stream changes (e.g. device switch / resolution change).
   useEffect(() => {
-    if (!isHost && camera.stream) {
+    if (!isHost && camera.stream && !hasAnsweredRef.current) {
+      hasAnsweredRef.current = true;
       actions.answer(camera.stream);
     }
     // Only run when camera.stream changes
@@ -54,7 +71,8 @@ export default function RoomClient({ room }: RoomClientProps) {
     try {
       await navigator.clipboard.writeText(room.roomCode);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      // CRITIQUE-2: store the timeout ID so it can be cleared on unmount
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       // Clipboard API not available — silently ignore
     }
@@ -63,6 +81,16 @@ export default function RoomClient({ room }: RoomClientProps) {
   const handleDisconnect = () => {
     camera.stopCamera();
     void actions.disconnect();
+  };
+
+  // CRITIQUE-1: Toggle mute by enabling/disabling audio tracks on the stream
+  const handleToggleMute = () => {
+    if (camera.stream) {
+      camera.stream.getAudioTracks().forEach((track) => {
+        track.enabled = isMuted; // if currently muted → enable; if unmuted → disable
+      });
+    }
+    setIsMuted((prev) => !prev);
   };
 
   const localFeed = (
@@ -87,6 +115,57 @@ export default function RoomClient({ room }: RoomClientProps) {
 
   const controls = (
     <>
+      {/* CRITIQUE-1: Mute/unmute button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleToggleMute}
+        className="min-h-[44px] min-w-[44px] border-gray-700 bg-gray-800 text-gray-200 hover:bg-gray-700 hover:text-white"
+        aria-label={isMuted ? "Unmute microphone" : "Mute microphone"}
+        aria-pressed={isMuted}
+      >
+        {isMuted ? (
+          // Microphone-off icon
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
+            />
+          </svg>
+        ) : (
+          // Microphone icon
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+            />
+          </svg>
+        )}
+      </Button>
       <CameraSetup
         devices={camera.devices}
         settings={camera.settings}

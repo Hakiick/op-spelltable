@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -78,6 +79,9 @@ export default function CameraSetup({
       <DialogContent className="border-gray-700 bg-gray-900 text-white sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-white">Camera Settings</DialogTitle>
+          <DialogDescription className="sr-only">
+            Configure your camera device, resolution, and mirror settings.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-5">

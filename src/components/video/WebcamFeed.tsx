@@ -19,8 +19,15 @@ export default function WebcamFeed({
 }: WebcamFeedProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const internalStreamRef = useRef<MediaStream | null>(null);
+  const onStreamRef = useRef(onStream);
   const [feedState, setFeedState] = useState<FeedState>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
+
+  // Keep onStreamRef pointing to the latest callback so the standalone effect
+  // always calls the current version without needing it in its deps.
+  useEffect(() => {
+    onStreamRef.current = onStream;
+  }, [onStream]);
 
   const isControlled = externalStream !== undefined;
 
@@ -66,7 +73,7 @@ export default function WebcamFeed({
         }
 
         setFeedState("active");
-        onStream?.(mediaStream);
+        onStreamRef.current?.(mediaStream);
       } catch (err) {
         if (cancelled) return;
 

@@ -155,7 +155,6 @@ export function useCamera(): UseCameraReturn {
 
   // Cleanup on unmount
   useEffect(() => {
-    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
       if (streamRef.current) {
