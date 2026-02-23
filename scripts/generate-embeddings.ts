@@ -129,7 +129,8 @@ async function generateRealDatabase(
   }
 
   try {
-    sharp = (await import("sharp")).default as unknown as typeof import("sharp");
+    sharp = (await import("sharp"))
+      .default as unknown as typeof import("sharp");
   } catch {
     console.error(
       "  ERROR: Could not load sharp. Install it with: npm install --save-dev sharp"
@@ -157,9 +158,23 @@ async function generateRealDatabase(
       // Download image
       const imageBuffer = await downloadImage(card.imageUrl);
 
-      // Resize with sharp
-      const resizedBuffer = await (sharp as unknown as (input: Buffer) => { resize: (w: number, h: number) => { raw: () => { toBuffer: () => Promise<Buffer> } } })(imageBuffer)
-        .resize(INPUT_SIZE, INPUT_SIZE)
+      // Resize with sharp — use fit:'fill' to match the browser's canvas drawImage
+      // which stretches (not crops) to fill the target dimensions.
+      const resizedBuffer = await (
+        sharp as unknown as (input: Buffer) => {
+          resize: (
+            w: number,
+            h: number,
+            opts: { fit: string }
+          ) => {
+            removeAlpha: () => {
+              raw: () => { toBuffer: () => Promise<Buffer> };
+            };
+          };
+        }
+      )(imageBuffer)
+        .resize(INPUT_SIZE, INPUT_SIZE, { fit: "fill" })
+        .removeAlpha()
         .raw()
         .toBuffer();
 
@@ -172,12 +187,7 @@ async function generateRealDatabase(
       }
 
       // Run inference (manually manage tensors)
-      const inputTensor = tf.tensor4d(float32, [
-        1,
-        INPUT_SIZE,
-        INPUT_SIZE,
-        3,
-      ]);
+      const inputTensor = tf.tensor4d(float32, [1, INPUT_SIZE, INPUT_SIZE, 3]);
       const rawOutput = model.predict(inputTensor);
       inputTensor.dispose();
 
@@ -286,7 +296,9 @@ async function main(): Promise<void> {
   // Write manifest
   const manifest: Manifest = {
     version: "1.0.0",
-    model: mock ? "mobilenet_v3_small_100_224_mock" : "mobilenet_v3_small_100_224",
+    model: mock
+      ? "mobilenet_v3_small_100_224_mock"
+      : "mobilenet_v3_small_100_224",
     sets: manifestEntries,
     generatedAt: new Date().toISOString(),
   };
