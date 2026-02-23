@@ -1,6 +1,7 @@
 import type {
   RecognitionConfig,
   RecognitionOutput,
+  DetectedCard,
   WorkerMessage,
   WorkerResponse,
 } from "@/types/ml";
@@ -11,15 +12,53 @@ import {
   findTopCandidates,
   type ReferenceDatabase,
 } from "./reference-db";
+import {
+  initDetectionModel,
+  detectCards,
+  disposeDetectionModel,
+} from "./detection";
 
 const FPS_WINDOW_SIZE = 10;
+
+/**
+ * Crops a rectangular region from an ImageData object.
+ * Clamps coordinates to the source dimensions.
+ */
+function cropFromImageData(
+  source: ImageData,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+): ImageData {
+  // Clamp to source bounds
+  const sx = Math.max(0, Math.min(x, source.width));
+  const sy = Math.max(0, Math.min(y, source.height));
+  const sw = Math.min(w, source.width - sx);
+  const sh = Math.min(h, source.height - sy);
+
+  if (sw <= 0 || sh <= 0) {
+    return new ImageData(1, 1);
+  }
+
+  const cropped = new ImageData(sw, sh);
+  for (let row = 0; row < sh; row++) {
+    const srcOffset = ((sy + row) * source.width + sx) * 4;
+    const dstOffset = row * sw * 4;
+    cropped.data.set(
+      source.data.subarray(srcOffset, srcOffset + sw * 4),
+      dstOffset
+    );
+  }
+  return cropped;
+}
 
 export interface WorkerBridge {
   initialize(modelUrl: string, embeddingsUrl: string): Promise<void>;
   recognize(
     imageData: ImageData,
     config: RecognitionConfig
-  ): Promise<{ result: RecognitionOutput; fps: number }>;
+  ): Promise<{ result: RecognitionOutput; fps: number; detectedCards: DetectedCard[] }>;
   dispose(): void;
   isUsingWorker(): boolean;
 }
@@ -115,6 +154,14 @@ export function createWorkerBridge(
     fallbackModel = loadedModel;
     fallbackDb = loadedDb;
     fallbackReady = true;
+
+    // Detection model is optional — don't crash the pipeline if missing
+    try {
+      await initDetectionModel();
+    } catch {
+      // YOLOv8n ONNX model not available — detection disabled,
+      // recognition will process the full frame instead
+    }
   }
 
   async function initialize(
@@ -171,7 +218,7 @@ export function createWorkerBridge(
   async function recognize(
     imageData: ImageData,
     config: RecognitionConfig
-  ): Promise<{ result: RecognitionOutput; fps: number }> {
+  ): Promise<{ result: RecognitionOutput; fps: number; detectedCards: DetectedCard[] }> {
     if (usingWorker && worker) {
       const w = worker;
       // Clone the ImageData before sending to worker to avoid detached buffer issues
@@ -181,14 +228,15 @@ export function createWorkerBridge(
         imageData.height
       );
 
-      return new Promise<{ result: RecognitionOutput; fps: number }>(
+      return new Promise<{ result: RecognitionOutput; fps: number; detectedCards: DetectedCard[] }>(
         (resolve, reject) => {
           const handleMessage = (event: MessageEvent<WorkerResponse>): void => {
             clearTimeout(timeout);
             w.removeEventListener("message", handleMessage);
             w.removeEventListener("error", onError);
             if (event.data.type === "result") {
-              resolve({ result: event.data.data, fps: event.data.fps });
+              // Worker path doesn't support detection yet — return empty
+              resolve({ result: event.data.data, fps: event.data.fps, detectedCards: [] });
             } else if (event.data.type === "error") {
               reject(new Error(event.data.message));
             }
@@ -220,7 +268,7 @@ export function createWorkerBridge(
       );
     }
 
-    // Main-thread fallback: process imageData directly using the pipeline
+    // Main-thread fallback: detect cards first, then recognize each crop
     const start = Date.now();
 
     if (!fallbackReady || !fallbackModel || !fallbackDb) {
@@ -233,11 +281,40 @@ export function createWorkerBridge(
           durationMs: Date.now() - start,
         },
         fps,
+        detectedCards: [],
       };
     }
 
     try {
-      const preprocessed = preprocessFrame(imageData, config.inputSize);
+      // Step 1: Try to detect card-like objects with YOLOv8n
+      const detectedCards = await detectCards(imageData);
+
+      // Step 2: Determine input for MobileNetV3
+      // If detection found cards → crop the best one
+      // If detection unavailable/empty → use the full frame as fallback
+      let recognitionInput: ImageData;
+      let sorted: DetectedCard[] = [];
+
+      if (detectedCards.length > 0) {
+        sorted = [...detectedCards].sort(
+          (a, b) => b.confidence - a.confidence
+        );
+        const bestDetection = sorted[0];
+        const [bx, by, bw, bh] = bestDetection.bbox;
+        recognitionInput = cropFromImageData(
+          imageData,
+          Math.round(bx),
+          Math.round(by),
+          Math.round(bw),
+          Math.round(bh)
+        );
+      } else {
+        // No detection model or no cards found — process full frame
+        recognitionInput = imageData;
+      }
+
+      // Step 3: Preprocess and run MobileNetV3 on the selected input
+      const preprocessed = preprocessFrame(recognitionInput, config.inputSize);
       const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
 
       const outputTensor = tf.tidy(() => {
@@ -275,6 +352,7 @@ export function createWorkerBridge(
             durationMs,
           },
           fps,
+          detectedCards: sorted,
         };
       }
 
@@ -287,6 +365,7 @@ export function createWorkerBridge(
           durationMs,
         },
         fps,
+        detectedCards: sorted,
       };
     } catch {
       const fps = recordCompletion();
@@ -298,6 +377,7 @@ export function createWorkerBridge(
           durationMs: Date.now() - start,
         },
         fps,
+        detectedCards: [],
       };
     }
   }
@@ -313,6 +393,7 @@ export function createWorkerBridge(
       fallbackModel.dispose();
       fallbackModel = null;
     }
+    disposeDetectionModel();
     fallbackDb = null;
     fallbackReady = false;
     usingWorker = false;

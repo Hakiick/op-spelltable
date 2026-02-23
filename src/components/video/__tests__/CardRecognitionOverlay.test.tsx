@@ -8,6 +8,7 @@ function makeState(overrides?: Partial<CardRecognitionState>): CardRecognitionSt
     status: "ready",
     lastResult: null,
     topCandidates: [],
+    detectedCards: [],
     error: null,
     isActive: false,
     loadingProgress: 0,

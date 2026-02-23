@@ -113,6 +113,8 @@ export default function SoloGameClient({
               isActive={recognition.state.isActive}
               isUsingWorker={recognition.isUsingWorker}
               onToggle={handleToggleRecognition}
+              videoWidth={videoRef.current?.videoWidth}
+              videoHeight={videoRef.current?.videoHeight}
             />
           </div>
 

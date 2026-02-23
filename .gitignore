@@ -69,3 +69,6 @@ dev.db
 
 # TypeScript build info
 tsconfig.tsbuildinfo
+
+# ML model files (too large for git — use scripts/download-yolo-model.sh)
+public/ml/*.onnx

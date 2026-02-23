@@ -1,12 +1,16 @@
 "use client";
 
-import type { CardRecognitionState } from "@/types/ml";
+import type { CardRecognitionState, DetectedCard } from "@/types/ml";
 
 interface CardRecognitionOverlayProps {
   state: CardRecognitionState;
   isActive: boolean;
   isUsingWorker: boolean;
   onToggle: () => void;
+  /** Width of the video source in pixels (for scaling bounding boxes) */
+  videoWidth?: number;
+  /** Height of the video source in pixels (for scaling bounding boxes) */
+  videoHeight?: number;
   className?: string;
 }
 
@@ -22,14 +26,28 @@ function getConfidenceColor(confidence: number): string {
   return "bg-red-900/70";
 }
 
+function getBboxBorderColor(confidence: number): string {
+  if (confidence >= 0.7) return "border-green-400";
+  if (confidence >= 0.5) return "border-yellow-400";
+  return "border-red-400";
+}
+
+function getBboxLabelBg(confidence: number): string {
+  if (confidence >= 0.7) return "bg-green-600/80";
+  if (confidence >= 0.5) return "bg-yellow-600/80";
+  return "bg-red-600/80";
+}
+
 export default function CardRecognitionOverlay({
   state,
   isActive,
   isUsingWorker,
   onToggle,
+  videoWidth,
+  videoHeight,
   className = "",
 }: CardRecognitionOverlayProps) {
-  const { status, lastResult, error, loadingProgress, fps } = state;
+  const { status, lastResult, detectedCards, error, loadingProgress, fps } = state;
 
   const isLoading = status === "loading";
   const isError = status === "error";
@@ -169,6 +187,44 @@ export default function CardRecognitionOverlay({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Bounding boxes for detected cards */}
+      {isActive && detectedCards && detectedCards.length > 0 && videoWidth && videoHeight && (
+        <>
+          {detectedCards.map((card: DetectedCard, idx: number) => {
+            const [bx, by, bw, bh] = card.bbox;
+            // Convert pixel coordinates to percentages relative to video dimensions
+            const left = (bx / videoWidth) * 100;
+            const top = (by / videoHeight) * 100;
+            const width = (bw / videoWidth) * 100;
+            const height = (bh / videoHeight) * 100;
+            const pct = Math.round(card.confidence * 100);
+
+            return (
+              <div
+                key={idx}
+                className={`absolute border-2 ${getBboxBorderColor(card.confidence)} rounded pointer-events-none`}
+                style={{
+                  left: `${left}%`,
+                  top: `${top}%`,
+                  width: `${width}%`,
+                  height: `${height}%`,
+                }}
+                aria-hidden="true"
+              >
+                {/* Label with card code (if matched) + detection confidence */}
+                <span
+                  className={`absolute -top-5 left-0 rounded px-1 py-0.5 text-[10px] font-mono text-white whitespace-nowrap ${getBboxLabelBg(card.confidence)}`}
+                >
+                  {idx === 0 && lastResult?.cardCode
+                    ? `${lastResult.cardCode} (${pct}%)`
+                    : `Card ${idx + 1} (${pct}%)`}
+                </span>
+              </div>
+            );
+          })}
+        </>
       )}
 
       {/* Bottom: Result / no match (only when active and not loading/error) */}

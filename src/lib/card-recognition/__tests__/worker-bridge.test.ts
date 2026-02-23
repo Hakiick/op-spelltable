@@ -45,6 +45,13 @@ vi.mock("../reference-db", () => ({
   normalizeEmbedding: vi.fn((v: Float32Array) => v),
 }));
 
+// Mock detection module (COCO-SSD)
+vi.mock("../detection", () => ({
+  initDetectionModel: vi.fn().mockResolvedValue(undefined),
+  detectCards: vi.fn().mockResolvedValue([]),
+  disposeDetectionModel: vi.fn(),
+}));
+
 // Mock TensorFlow.js
 vi.mock("@tensorflow/tfjs", () => ({
   loadGraphModel: vi.fn().mockResolvedValue({
@@ -168,6 +175,7 @@ describe("createWorkerBridge", () => {
 
       expect(result).toHaveProperty("result");
       expect(result).toHaveProperty("fps");
+      expect(result).toHaveProperty("detectedCards");
       expect(typeof result.fps).toBe("number");
     });
 

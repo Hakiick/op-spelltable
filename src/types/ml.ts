@@ -51,6 +51,7 @@ export interface CardRecognitionState {
   status: PipelineStatus;
   lastResult: RecognitionOutput | null;
   topCandidates: RecognitionResult[];
+  detectedCards: DetectedCard[];
   error: string | null;
   isActive: boolean;
   loadingProgress: number;
@@ -74,4 +75,14 @@ export interface CropRegion {
   y: number;
   width: number;
   height: number;
+}
+
+export interface DetectedCard {
+  bbox: [number, number, number, number]; // [x, y, width, height] in pixels
+  confidence: number;
+}
+
+export interface DetectionConfig {
+  detectionThreshold: number; // minimum score to keep a detection (default: 0.3)
+  maxDetections: number; // max number of cards to detect per frame (default: 10)
 }

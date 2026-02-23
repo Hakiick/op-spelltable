@@ -15,6 +15,7 @@ import type {
   RecognitionConfig,
   RecognitionResult,
   CropRegion,
+  DetectedCard,
 } from "@/types/ml";
 
 const DEFAULT_CONFIG: RecognitionConfig = {
@@ -60,6 +61,7 @@ export function useCardRecognition(
     status: "idle",
     lastResult: null,
     topCandidates: [],
+    detectedCards: [],
     error: null,
     isActive: false,
     loadingProgress: 0,
@@ -154,7 +156,7 @@ export function useCardRecognition(
             setState((prev) => ({ ...prev, status: "processing" }));
 
             void bridge.recognize(imageData, currentConfig).then(
-              ({ result, fps }) => {
+              ({ result, fps, detectedCards }) => {
                 recognizingRef.current = false;
                 const candidates: RecognitionResult[] =
                   result.cardCode !== null
@@ -165,6 +167,7 @@ export function useCardRecognition(
                   status: "ready",
                   lastResult: result,
                   topCandidates: candidates,
+                  detectedCards: detectedCards ?? [],
                   fps,
                 }));
               },
@@ -225,7 +228,7 @@ export function useCardRecognition(
         }
 
         const bridge = getBridge();
-        const { result, fps } = await bridge.recognize(
+        const { result, fps, detectedCards } = await bridge.recognize(
           capture.imageData,
           config
         );
@@ -237,6 +240,7 @@ export function useCardRecognition(
           status: "ready",
           lastResult: result,
           topCandidates: candidates,
+          detectedCards: detectedCards ?? [],
           fps,
         }));
       } catch (err) {
