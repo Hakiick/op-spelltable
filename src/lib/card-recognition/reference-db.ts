@@ -91,6 +91,54 @@ export async function loadReferenceDatabase(
   };
 }
 
+interface ManifestEntry {
+  setCode: string;
+  embeddingsUrl: string;
+  cardCount: number;
+}
+
+interface Manifest {
+  version: string;
+  model: string;
+  sets: ManifestEntry[];
+}
+
+/**
+ * Loads all embedding databases listed in the manifest and merges them
+ * into a single ReferenceDatabase.
+ */
+export async function loadAllReferenceDatabases(
+  manifestUrl: string
+): Promise<ReferenceDatabase> {
+  const response = await fetch(manifestUrl);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to load manifest from ${manifestUrl}: ${response.status}`
+    );
+  }
+
+  const manifest = (await response.json()) as Manifest;
+
+  const databases = await Promise.all(
+    manifest.sets.map((entry) => loadReferenceDatabase(entry.embeddingsUrl))
+  );
+
+  const allEmbeddings: ReferenceEmbedding[] = [];
+  let embeddingDim = 0;
+
+  for (const db of databases) {
+    allEmbeddings.push(...db.embeddings);
+    if (db.embeddingDim > 0) embeddingDim = db.embeddingDim;
+  }
+
+  return {
+    embeddings: allEmbeddings,
+    cardCount: allEmbeddings.length,
+    embeddingDim,
+    model: manifest.model,
+  };
+}
+
 /**
  * Finds the top-K most similar cards in the reference database for a query embedding.
  * Returns candidates above the confidence threshold, sorted by descending confidence.

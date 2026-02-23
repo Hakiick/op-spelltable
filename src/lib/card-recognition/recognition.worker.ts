@@ -8,6 +8,7 @@ import type { WorkerMessage, WorkerResponse } from "@/types/ml";
 import { preprocessFrame } from "./preprocess";
 import {
   loadReferenceDatabase,
+  loadAllReferenceDatabases,
   findTopCandidates,
   type ReferenceDatabase,
 } from "./reference-db";
@@ -57,9 +58,12 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>): Promise<void> => {
   if (msg.type === "init") {
     try {
       const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
+      const isManifest = msg.embeddingsUrl.endsWith("manifest.json");
       const [loadedModel, loadedDb] = await Promise.all([
         tf.loadGraphModel(msg.modelUrl, { fromTFHub: true }),
-        loadReferenceDatabase(msg.embeddingsUrl),
+        isManifest
+          ? loadAllReferenceDatabases(msg.embeddingsUrl)
+          : loadReferenceDatabase(msg.embeddingsUrl),
       ]);
       model = loadedModel;
       referenceDb = loadedDb;

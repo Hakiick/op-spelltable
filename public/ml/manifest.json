@@ -1,12 +1,17 @@
 {
   "version": "1.0.0",
-  "model": "mobilenet_v3_small_100_224",
+  "model": "mobilenet_v3_small_100_224_mock",
   "sets": [
     {
       "setCode": "OP01",
       "embeddingsUrl": "/ml/embeddings-OP01.json",
       "cardCount": 121
+    },
+    {
+      "setCode": "OP12",
+      "embeddingsUrl": "/ml/embeddings-OP12.json",
+      "cardCount": 127
     }
   ],
-  "generatedAt": "2026-02-22T00:00:00.000Z"
+  "generatedAt": "2026-02-23T08:03:09.200Z"
 }

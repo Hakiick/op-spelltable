@@ -5,6 +5,7 @@ import { captureFrame } from "./capture";
 import { preprocessFrame } from "./preprocess";
 import {
   loadReferenceDatabase,
+  loadAllReferenceDatabases,
   findTopCandidates,
   type ReferenceDatabase,
 } from "./reference-db";
@@ -12,7 +13,7 @@ import {
 const DEFAULT_MODEL_URL =
   "https://tfhub.dev/google/tfjs-model/imagenet/mobilenet_v3_small_100_224/feature_vector/5/default/1";
 
-const DEFAULT_EMBEDDINGS_URL = "/ml/embeddings-OP01.json";
+const DEFAULT_EMBEDDINGS_URL = "/ml/manifest.json";
 
 export interface CardRecognizer {
   isReady: boolean;
@@ -57,9 +58,12 @@ function createCardRecognizerImpl(): CardRecognizer {
       const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
 
       // Load the model and reference DB concurrently
+      const isManifest = embeddingsUrl.endsWith("manifest.json");
       const [loadedModel, loadedDb] = await Promise.all([
         tf.loadGraphModel(modelUrl, { fromTFHub: true }),
-        loadReferenceDatabase(embeddingsUrl),
+        isManifest
+          ? loadAllReferenceDatabases(embeddingsUrl)
+          : loadReferenceDatabase(embeddingsUrl),
       ]);
 
       model = loadedModel;

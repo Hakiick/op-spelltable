@@ -7,6 +7,7 @@ import type {
 import { preprocessFrame } from "./preprocess";
 import {
   loadReferenceDatabase,
+  loadAllReferenceDatabases,
   findTopCandidates,
   type ReferenceDatabase,
 } from "./reference-db";
@@ -104,9 +105,12 @@ export function createWorkerBridge(
     embeddingsUrl: string
   ): Promise<void> {
     const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
+    const isManifest = embeddingsUrl.endsWith("manifest.json");
     const [loadedModel, loadedDb] = await Promise.all([
       tf.loadGraphModel(modelUrl, { fromTFHub: true }),
-      loadReferenceDatabase(embeddingsUrl),
+      isManifest
+        ? loadAllReferenceDatabases(embeddingsUrl)
+        : loadReferenceDatabase(embeddingsUrl),
     ]);
     fallbackModel = loadedModel;
     fallbackDb = loadedDb;
