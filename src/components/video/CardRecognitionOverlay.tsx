@@ -221,26 +221,46 @@ export default function CardRecognitionOverlay({
               const height = (bh / videoHeight) * 100;
               const pct = Math.round(card.confidence * 100);
 
+              // Inner crop box (10% shrink on each side = 80% of original)
+              const cropInset = 10; // percent of bbox dimension
+              const cropLeft = left + (width * cropInset) / 100;
+              const cropTop = top + (height * cropInset) / 100;
+              const cropWidth = width * (1 - (2 * cropInset) / 100);
+              const cropHeight = height * (1 - (2 * cropInset) / 100);
+
               return (
-                <div
-                  key={idx}
-                  className={`absolute border-2 ${getBboxBorderColor(card.confidence)} rounded pointer-events-none`}
-                  style={{
-                    left: `${left}%`,
-                    top: `${top}%`,
-                    width: `${width}%`,
-                    height: `${height}%`,
-                  }}
-                  aria-hidden="true"
-                >
-                  {/* Label with card code (if matched) + detection confidence */}
-                  <span
-                    className={`absolute -top-5 left-0 rounded px-1 py-0.5 text-[10px] font-mono text-white whitespace-nowrap ${getBboxLabelBg(card.confidence)}`}
+                <div key={idx}>
+                  {/* Outer detection bbox */}
+                  <div
+                    className={`absolute border-2 ${getBboxBorderColor(card.confidence)} rounded pointer-events-none`}
+                    style={{
+                      left: `${left}%`,
+                      top: `${top}%`,
+                      width: `${width}%`,
+                      height: `${height}%`,
+                    }}
+                    aria-hidden="true"
                   >
-                    {idx === 0 && lastResult?.cardCode
-                      ? `${lastResult.cardCode} (${pct}%)`
-                      : `Card ${idx + 1} (${pct}%)`}
-                  </span>
+                    {/* Label with card code (if matched) + detection confidence */}
+                    <span
+                      className={`absolute -top-5 left-0 rounded px-1 py-0.5 text-[10px] font-mono text-white whitespace-nowrap ${getBboxLabelBg(card.confidence)}`}
+                    >
+                      {idx === 0 && lastResult?.cardCode
+                        ? `${lastResult.cardCode} (${pct}%)`
+                        : `Card ${idx + 1} (${pct}%)`}
+                    </span>
+                  </div>
+                  {/* Inner recognition crop (dashed cyan) */}
+                  <div
+                    className="absolute border border-dashed border-cyan-400 rounded pointer-events-none"
+                    style={{
+                      left: `${cropLeft}%`,
+                      top: `${cropTop}%`,
+                      width: `${cropWidth}%`,
+                      height: `${cropHeight}%`,
+                    }}
+                    aria-hidden="true"
+                  />
                 </div>
               );
             })}

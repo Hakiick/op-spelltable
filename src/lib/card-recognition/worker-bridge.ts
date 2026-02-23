@@ -340,8 +340,7 @@ export function createWorkerBridge(
         const [bx, by, bw, bh] = bestDetection.bbox;
 
         // Shrink the bbox by 10% on each edge to counteract the tendency of
-        // YOLOv8 detections to be significantly larger than the actual card.
-        // This removes background that dilutes the card features.
+        // YOLOv8 detections to be slightly larger than the actual card.
         const shrinkX = bw * 0.1;
         const shrinkY = bh * 0.1;
         recognitionInput = cropFromImageData(
