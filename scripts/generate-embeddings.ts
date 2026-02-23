@@ -51,10 +51,13 @@ interface Manifest {
   generatedAt: string;
 }
 
-const EMBEDDING_DIM = 1024;
+const EMBEDDING_DIM = 1280;
 const MODEL_URL =
-  "https://tfhub.dev/google/tfjs-model/imagenet/mobilenet_v3_small_100_224/feature_vector/5/default/1";
+  "https://tfhub.dev/google/tfjs-model/imagenet/mobilenet_v3_large_100_224/feature_vector/5/default/1";
 const INPUT_SIZE = 224;
+
+/** Number of augmented versions to generate per card for a robust centroid embedding. */
+const AUGMENT_COUNT = 5;
 const DATA_DIR = path.resolve("src/data/cards");
 const OUTPUT_DIR = path.resolve("public/ml");
 
@@ -90,7 +93,7 @@ async function generateMockDatabase(
 
   return {
     version: "1.0.0",
-    model: "mobilenet_v3_small_100_224_mock",
+    model: "mobilenet_v3_large_100_224_mock",
     embeddingDim: EMBEDDING_DIM,
     cardCount: entries.length,
     generatedAt: new Date().toISOString(),
@@ -107,17 +110,96 @@ async function downloadImage(url: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer);
 }
 
+type SharpInstance = {
+  resize: (
+    w: number,
+    h: number,
+    opts: { fit: string; background?: { r: number; g: number; b: number } }
+  ) => SharpInstance;
+  removeAlpha: () => SharpInstance;
+  rotate: (angle: number, opts?: { background: { r: number; g: number; b: number; alpha: number } }) => SharpInstance;
+  modulate: (opts: { brightness?: number; saturation?: number }) => SharpInstance;
+  blur: (sigma?: number) => SharpInstance;
+  raw: () => { toBuffer: () => Promise<Buffer> };
+};
+type SharpFn = (input: Buffer) => SharpInstance;
+
+/**
+ * Generates augmented versions of a card image buffer for more robust embeddings.
+ * Returns an array of letterboxed, normalized Float32Array buffers ready for MobileNet.
+ */
+async function generateAugmentedInputs(
+  imageBuffer: Buffer,
+  sharpFn: SharpFn
+): Promise<Float32Array[]> {
+  const augmentations: Array<(s: SharpInstance) => SharpInstance> = [
+    // 0: Original (no augmentation)
+    (s) => s,
+    // 1: Slight clockwise rotation
+    (s) => s.rotate(10, { background: { r: 128, g: 128, b: 128, alpha: 1 } }),
+    // 2: Slight counter-clockwise rotation
+    (s) => s.rotate(-10, { background: { r: 128, g: 128, b: 128, alpha: 1 } }),
+    // 3: Brighter
+    (s) => s.modulate({ brightness: 1.3 }),
+    // 4: Darker + slight blur (simulates distance/defocus)
+    (s) => s.modulate({ brightness: 0.7 }).blur(1.5),
+  ];
+
+  const results: Float32Array[] = [];
+
+  for (const augment of augmentations.slice(0, AUGMENT_COUNT)) {
+    const pipeline = augment(sharpFn(imageBuffer));
+    const resizedBuffer = await pipeline
+      .resize(INPUT_SIZE, INPUT_SIZE, {
+        fit: "contain",
+        background: { r: 128, g: 128, b: 128 },
+      })
+      .removeAlpha()
+      .raw()
+      .toBuffer();
+
+    const float32 = new Float32Array(INPUT_SIZE * INPUT_SIZE * 3);
+    for (let i = 0; i < INPUT_SIZE * INPUT_SIZE; i++) {
+      float32[i * 3] = resizedBuffer[i * 3] / 127.5 - 1;
+      float32[i * 3 + 1] = resizedBuffer[i * 3 + 1] / 127.5 - 1;
+      float32[i * 3 + 2] = resizedBuffer[i * 3 + 2] / 127.5 - 1;
+    }
+    results.push(float32);
+  }
+
+  return results;
+}
+
+/**
+ * Averages multiple embedding vectors into a single centroid embedding.
+ */
+function averageEmbeddings(embeddings: Float32Array[]): number[] {
+  if (embeddings.length === 0) return [];
+  const dim = embeddings[0].length;
+  const avg = new Float64Array(dim); // Use float64 for accumulation precision
+  for (const emb of embeddings) {
+    for (let i = 0; i < dim; i++) {
+      avg[i] += emb[i];
+    }
+  }
+  const result: number[] = new Array(dim);
+  for (let i = 0; i < dim; i++) {
+    result[i] = avg[i] / embeddings.length;
+  }
+  return result;
+}
+
 async function generateRealDatabase(
   setCode: string,
   cards: CardEntry[]
 ): Promise<EmbeddingDatabase> {
   console.log(
-    `  [real] Loading MobileNetV3 model for ${setCode} (${cards.length} cards)...`
+    `  [real] Loading MobileNetV3 Large model for ${setCode} (${cards.length} cards, ${AUGMENT_COUNT} augmentations each)...`
   );
 
   // Dynamic imports to avoid load-time errors in environments without native bindings
   let tf: typeof import("@tensorflow/tfjs");
-  let sharp: typeof import("sharp");
+  let sharpFn: SharpFn;
 
   try {
     tf = await import("@tensorflow/tfjs");
@@ -129,8 +211,8 @@ async function generateRealDatabase(
   }
 
   try {
-    sharp = (await import("sharp"))
-      .default as unknown as typeof import("sharp");
+    sharpFn = (await import("sharp"))
+      .default as unknown as SharpFn;
   } catch {
     console.error(
       "  ERROR: Could not load sharp. Install it with: npm install --save-dev sharp"
@@ -158,54 +240,28 @@ async function generateRealDatabase(
       // Download image
       const imageBuffer = await downloadImage(card.imageUrl);
 
-      // Letterbox resize with sharp — fit:'contain' preserves aspect ratio
-      // and pads with gray (128). This matches the browser's preprocessFrame()
-      // which also letterboxes with gray before feeding to MobileNetV3.
-      const resizedBuffer = await (
-        sharp as unknown as (input: Buffer) => {
-          resize: (
-            w: number,
-            h: number,
-            opts: { fit: string; background: { r: number; g: number; b: number } }
-          ) => {
-            removeAlpha: () => {
-              raw: () => { toBuffer: () => Promise<Buffer> };
-            };
-          };
-        }
-      )(imageBuffer)
-        .resize(INPUT_SIZE, INPUT_SIZE, {
-          fit: "contain",
-          background: { r: 128, g: 128, b: 128 },
-        })
-        .removeAlpha()
-        .raw()
-        .toBuffer();
+      // Generate augmented versions and compute embeddings for each
+      const augmentedInputs = await generateAugmentedInputs(imageBuffer, sharpFn);
+      const augmentedEmbeddings: Float32Array[] = [];
 
-      // Convert to Float32Array normalized to [-1, 1]
-      const float32 = new Float32Array(INPUT_SIZE * INPUT_SIZE * 3);
-      for (let i = 0; i < INPUT_SIZE * INPUT_SIZE; i++) {
-        float32[i * 3] = resizedBuffer[i * 3] / 127.5 - 1;
-        float32[i * 3 + 1] = resizedBuffer[i * 3 + 1] / 127.5 - 1;
-        float32[i * 3 + 2] = resizedBuffer[i * 3 + 2] / 127.5 - 1;
+      for (const input of augmentedInputs) {
+        const inputTensor = tf.tensor4d(input, [1, INPUT_SIZE, INPUT_SIZE, 3]);
+        const rawOutput = model.predict(inputTensor);
+        inputTensor.dispose();
+
+        const outputTensor = (
+          Array.isArray(rawOutput) ? rawOutput[0] : rawOutput
+        ) as import("@tensorflow/tfjs").Tensor;
+
+        const embeddingData = await outputTensor.data();
+        outputTensor.dispose();
+        augmentedEmbeddings.push(new Float32Array(embeddingData));
       }
 
-      // Run inference (manually manage tensors)
-      const inputTensor = tf.tensor4d(float32, [1, INPUT_SIZE, INPUT_SIZE, 3]);
-      const rawOutput = model.predict(inputTensor);
-      inputTensor.dispose();
-
-      // model.predict returns Tensor | Tensor[] — unwrap if needed
-      const outputTensor = (
-        Array.isArray(rawOutput) ? rawOutput[0] : rawOutput
-      ) as import("@tensorflow/tfjs").Tensor;
-
-      const embeddingData = await outputTensor.data();
-      outputTensor.dispose();
-
+      // Average all augmented embeddings into a single centroid
       entries.push({
         cardCode: card.cardId,
-        embedding: Array.from(embeddingData),
+        embedding: averageEmbeddings(augmentedEmbeddings),
       });
 
       process.stdout.write("OK\n");
@@ -219,7 +275,7 @@ async function generateRealDatabase(
 
   return {
     version: "1.0.0",
-    model: "mobilenet_v3_small_100_224",
+    model: "mobilenet_v3_large_100_224",
     embeddingDim: EMBEDDING_DIM,
     cardCount: entries.length,
     generatedAt: new Date().toISOString(),
@@ -301,8 +357,8 @@ async function main(): Promise<void> {
   const manifest: Manifest = {
     version: "1.0.0",
     model: mock
-      ? "mobilenet_v3_small_100_224_mock"
-      : "mobilenet_v3_small_100_224",
+      ? "mobilenet_v3_large_100_224_mock"
+      : "mobilenet_v3_large_100_224",
     sets: manifestEntries,
     generatedAt: new Date().toISOString(),
   };

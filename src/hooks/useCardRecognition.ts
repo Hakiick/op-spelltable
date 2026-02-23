@@ -25,7 +25,7 @@ const DEFAULT_CONFIG: RecognitionConfig = {
 };
 
 const DEFAULT_MODEL_URL =
-  "https://tfhub.dev/google/tfjs-model/imagenet/mobilenet_v3_small_100_224/feature_vector/5/default/1";
+  "https://tfhub.dev/google/tfjs-model/imagenet/mobilenet_v3_large_100_224/feature_vector/5/default/1";
 const DEFAULT_EMBEDDINGS_URL = "/ml/manifest.json";
 
 export interface UseCardRecognitionReturn {
