@@ -14,14 +14,8 @@ export async function POST(request: NextRequest) {
 
     const { name, email, password } = body;
 
-    if (
-      typeof name !== "string" ||
-      name.trim().length === 0
-    ) {
-      return NextResponse.json(
-        { error: "Name is required" },
-        { status: 400 }
-      );
+    if (typeof name !== "string" || name.trim().length === 0) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
     if (
@@ -63,9 +57,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Registration failed:", error);
-    return NextResponse.json(
-      { error: "Registration failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Registration failed" }, { status: 500 });
   }
 }

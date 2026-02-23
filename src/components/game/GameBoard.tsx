@@ -54,10 +54,7 @@ export default function GameBoard({
         </div>
 
         {/* Separator */}
-        <div
-          className="my-2 flex items-center gap-2"
-          aria-hidden="true"
-        >
+        <div className="my-2 flex items-center gap-2" aria-hidden="true">
           <div className="h-px flex-1 bg-gray-700" />
           <span className="text-[10px] uppercase tracking-widest text-gray-600">
             vs

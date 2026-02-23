@@ -37,7 +37,13 @@ function getColorBadge(color: string): string {
 
 // ── Stat badge ─────────────────────────────────────────────────────────────
 
-function StatBadge({ label, value }: { label: string; value: string | number }) {
+function StatBadge({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
   return (
     <div className="flex flex-col items-center rounded-md bg-gray-800 px-3 py-2">
       <span className="text-[10px] uppercase tracking-wider text-gray-400">
@@ -172,18 +178,14 @@ function CardContent({ card }: { card: CardData }) {
         card.counter !== null ||
         card.life !== null) && (
         <div className="flex flex-wrap gap-2">
-          {card.cost !== null && (
-            <StatBadge label="Cost" value={card.cost} />
-          )}
+          {card.cost !== null && <StatBadge label="Cost" value={card.cost} />}
           {card.power !== null && (
             <StatBadge label="Power" value={card.power.toLocaleString()} />
           )}
           {card.counter !== null && (
             <StatBadge label="Counter" value={card.counter.toLocaleString()} />
           )}
-          {card.life !== null && (
-            <StatBadge label="Life" value={card.life} />
-          )}
+          {card.life !== null && <StatBadge label="Life" value={card.life} />}
         </div>
       )}
 

@@ -5,7 +5,8 @@ import type { CardData } from "@/types/card";
 
 export const metadata: Metadata = {
   title: "Solo Test — OP SpellTable",
-  description: "Test the game board, camera, and card recognition in solo mode.",
+  description:
+    "Test the game board, camera, and card recognition in solo mode.",
 };
 
 function makeMockLeader(cardId: string, name: string): CardData {
@@ -27,7 +28,11 @@ function makeMockLeader(cardId: string, name: string): CardData {
   };
 }
 
-function makeMockCharacter(cardId: string, name: string, cost: number): CardData {
+function makeMockCharacter(
+  cardId: string,
+  name: string,
+  cost: number
+): CardData {
   return {
     id: `mock-${cardId}`,
     cardId,

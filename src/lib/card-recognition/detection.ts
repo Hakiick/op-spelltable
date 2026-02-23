@@ -105,18 +105,17 @@ export async function initDetectionModel(
  * Detect card-like objects in the given frame.
  * Returns bounding boxes in original image coordinates.
  */
-export async function detectCards(
-  input: ImageData
-): Promise<DetectedCard[]> {
+export async function detectCards(input: ImageData): Promise<DetectedCard[]> {
   if (!session || !ortRef) return [];
 
   const { tensor, scaleFactor } = preprocessForYolo(input);
 
-  const inputTensor = new ortRef.Tensor(
-    "float32",
-    tensor,
-    [1, 3, MODEL_SIZE, MODEL_SIZE]
-  );
+  const inputTensor = new ortRef.Tensor("float32", tensor, [
+    1,
+    3,
+    MODEL_SIZE,
+    MODEL_SIZE,
+  ]);
 
   const feeds: Record<string, OrtTensor> = { images: inputTensor };
   const results = await session.run(feeds);
@@ -202,8 +201,14 @@ function preprocessForYolo(imageData: ImageData): {
 
   dstCtx.drawImage(
     srcCanvas as CanvasImageSource,
-    0, 0, srcW, srcH,
-    0, 0, scaledW, scaledH
+    0,
+    0,
+    srcW,
+    srcH,
+    0,
+    0,
+    scaledW,
+    scaledH
   );
 
   // Extract pixels -> NCHW Float32 normalized [0, 1]
@@ -315,7 +320,10 @@ function nms(boxes: RawBox[], iouThreshold: number): RawBox[] {
     kept.push(sorted[i]);
 
     for (let j = i + 1; j < sorted.length; j++) {
-      if (!suppressed.has(j) && computeIou(sorted[i], sorted[j]) > iouThreshold) {
+      if (
+        !suppressed.has(j) &&
+        computeIou(sorted[i], sorted[j]) > iouThreshold
+      ) {
         suppressed.add(j);
       }
     }

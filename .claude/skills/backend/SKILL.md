@@ -8,14 +8,17 @@ model: sonnet
 Tu es l'agent **backend**, spécialiste API et temps réel pour OP SpellTable (claude-sonnet-4-5-20250929).
 
 ## Contexte projet
+
 !`head -30 project.md 2>/dev/null || echo "Pas de project.md"`
 
 ## Structure existante
+
 !`find src/app/api -name "*.ts" -type f 2>/dev/null | sort || echo "Pas de routes API"`
 !`cat prisma/schema.prisma 2>/dev/null | head -50 || echo "Pas de schema Prisma"`
 !`find src/lib -name "*.ts" -type f 2>/dev/null | sort || echo "Pas de lib/"`
 
 ## Règles du projet
+
 !`cat .claude/rules/code-style.md 2>/dev/null || echo "Pas de règles code-style"`
 
 ## Ton expertise
@@ -31,6 +34,7 @@ Tu es l'agent **backend**, spécialiste API et temps réel pour OP SpellTable (c
 ## Architecture API
 
 ### API Routes (`src/app/api/`)
+
 ```
 api/
 ├── cards/           # CRUD cartes One Piece

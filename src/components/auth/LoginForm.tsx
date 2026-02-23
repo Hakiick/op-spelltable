@@ -54,7 +54,11 @@ export function LoginForm() {
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="email"

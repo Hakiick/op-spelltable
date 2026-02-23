@@ -39,16 +39,24 @@ function buildVideoConstraints(
 ): MediaTrackConstraints {
   const sizeConstraints = RESOLUTION_CONSTRAINTS[settings.resolution];
   return {
-    ...(settings.deviceId ? { deviceId: { exact: settings.deviceId } } : { facingMode: "user" }),
+    ...(settings.deviceId
+      ? { deviceId: { exact: settings.deviceId } }
+      : { facingMode: "user" }),
     ...(sizeConstraints
-      ? { width: { ideal: sizeConstraints.width }, height: { ideal: sizeConstraints.height } }
+      ? {
+          width: { ideal: sizeConstraints.width },
+          height: { ideal: sizeConstraints.height },
+        }
       : {}),
   };
 }
 
 function parseMediaError(err: unknown): string {
   if (err instanceof DOMException) {
-    if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+    if (
+      err.name === "NotAllowedError" ||
+      err.name === "PermissionDeniedError"
+    ) {
       return "Camera access was denied. Please allow camera permissions.";
     }
     if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
@@ -70,7 +78,9 @@ export function useCamera(): UseCameraReturn {
     resolution: "auto",
     mirror: true,
   });
-  const [cameraState, setCameraState] = useState<"idle" | "loading" | "active" | "error">("idle");
+  const [cameraState, setCameraState] = useState<
+    "idle" | "loading" | "active" | "error"
+  >("idle");
   const [error, setError] = useState<string | null>(null);
 
   const streamRef = useRef<MediaStream | null>(null);

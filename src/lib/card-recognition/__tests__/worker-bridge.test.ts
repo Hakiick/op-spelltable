@@ -128,7 +128,10 @@ function createFailingWorkerFactory(): WorkerFactory {
     setTimeout(() => {
       if (instance.onmessage) {
         const event = {
-          data: { type: "error", message: "Worker init failed" } as WorkerResponse,
+          data: {
+            type: "error",
+            message: "Worker init failed",
+          } as WorkerResponse,
         } as MessageEvent<WorkerResponse>;
         instance.onmessage(event);
       }

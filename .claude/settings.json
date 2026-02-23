@@ -35,11 +35,7 @@
       "Bash(git ls-remote *)",
       "Bash(bash scripts/*)"
     ],
-    "deny": [
-      "Read(.env)",
-      "Read(.env.local)",
-      "Read(.env.production)"
-    ]
+    "deny": ["Read(.env)", "Read(.env.local)", "Read(.env.production)"]
   },
   "hooks": {
     "SessionStart": [

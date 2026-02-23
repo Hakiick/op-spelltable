@@ -71,7 +71,9 @@ test.describe("US-01 — Cards API", () => {
     expect(json.data.color).toBeTruthy();
   });
 
-  test("GET /api/cards/[code] returns 404 for unknown card", async ({ request }) => {
+  test("GET /api/cards/[code] returns 404 for unknown card", async ({
+    request,
+  }) => {
     const res = await request.get("/api/cards/FAKE-999");
     expect(res.status()).toBe(404);
   });

@@ -75,7 +75,12 @@ describe("useCamera", () => {
     const mockTrack = makeMockTrack("video");
     const mockStream = makeMockStream([mockTrack]);
     const mockDevicesImpl = makeMockMediaDevices(mockStream, [
-      { deviceId: "cam1", kind: "videoinput", label: "Front Camera", groupId: "" } as MediaDeviceInfo,
+      {
+        deviceId: "cam1",
+        kind: "videoinput",
+        label: "Front Camera",
+        groupId: "",
+      } as MediaDeviceInfo,
     ]);
     mockMediaDevices(mockDevicesImpl);
 
@@ -93,9 +98,24 @@ describe("useCamera", () => {
   it("startCamera enumerates devices after getting permission", async () => {
     const mockStream = makeMockStream([makeMockTrack()]);
     const mockDevicesImpl = makeMockMediaDevices(mockStream, [
-      { deviceId: "cam1", kind: "videoinput", label: "Front Camera", groupId: "" } as MediaDeviceInfo,
-      { deviceId: "cam2", kind: "videoinput", label: "Back Camera", groupId: "" } as MediaDeviceInfo,
-      { deviceId: "mic1", kind: "audioinput", label: "Microphone", groupId: "" } as MediaDeviceInfo,
+      {
+        deviceId: "cam1",
+        kind: "videoinput",
+        label: "Front Camera",
+        groupId: "",
+      } as MediaDeviceInfo,
+      {
+        deviceId: "cam2",
+        kind: "videoinput",
+        label: "Back Camera",
+        groupId: "",
+      } as MediaDeviceInfo,
+      {
+        deviceId: "mic1",
+        kind: "audioinput",
+        label: "Microphone",
+        groupId: "",
+      } as MediaDeviceInfo,
     ]);
     mockMediaDevices(mockDevicesImpl);
 
@@ -107,12 +127,21 @@ describe("useCamera", () => {
 
     // Should have 2 video devices (not the audio one)
     expect(result.current.devices).toHaveLength(2);
-    expect(result.current.devices[0]).toEqual({ deviceId: "cam1", label: "Front Camera" });
-    expect(result.current.devices[1]).toEqual({ deviceId: "cam2", label: "Back Camera" });
+    expect(result.current.devices[0]).toEqual({
+      deviceId: "cam1",
+      label: "Front Camera",
+    });
+    expect(result.current.devices[1]).toEqual({
+      deviceId: "cam2",
+      label: "Back Camera",
+    });
   });
 
   it("startCamera sets state to error on NotAllowedError", async () => {
-    const notAllowedError = new DOMException("Permission denied", "NotAllowedError");
+    const notAllowedError = new DOMException(
+      "Permission denied",
+      "NotAllowedError"
+    );
     const mockDevicesImpl = makeMockMediaDevices(notAllowedError);
     mockMediaDevices(mockDevicesImpl);
 
@@ -147,7 +176,10 @@ describe("useCamera", () => {
   });
 
   it("startCamera sets state to error on NotReadableError", async () => {
-    const notReadableError = new DOMException("Device in use", "NotReadableError");
+    const notReadableError = new DOMException(
+      "Device in use",
+      "NotReadableError"
+    );
     const mockDevicesImpl = makeMockMediaDevices(notReadableError);
     mockMediaDevices(mockDevicesImpl);
 

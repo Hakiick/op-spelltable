@@ -92,15 +92,12 @@ describe("createCardRecognizer", () => {
     const recognizer = createCardRecognizer();
     const mockVideo = {} as HTMLVideoElement;
 
-    const result = await recognizer.recognize(
-      mockVideo,
-      {
-        confidenceThreshold: 0.75,
-        inputSize: 224,
-        maxCandidates: 3,
-        frameSkip: 5,
-      }
-    );
+    const result = await recognizer.recognize(mockVideo, {
+      confidenceThreshold: 0.75,
+      inputSize: 224,
+      maxCandidates: 3,
+      frameSkip: 5,
+    });
 
     expect(result.cardCode).toBeNull();
     expect(result.confidence).toBe(0);

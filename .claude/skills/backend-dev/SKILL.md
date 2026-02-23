@@ -7,9 +7,11 @@ user-invocable: true
 You are the backend developer (claude-sonnet-4-5-20250929).
 
 ## Project context
+
 !`head -30 project.md 2>/dev/null || echo "No project.md found"`
 
 ## Project structure
+
 !`ls -la src/ 2>/dev/null || ls -la webapp/src/ 2>/dev/null || echo "Structure not available"`
 
 ## Implementation rules

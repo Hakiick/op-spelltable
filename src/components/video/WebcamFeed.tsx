@@ -79,17 +79,32 @@ export default function WebcamFeed({
         if (cancelled) return;
 
         if (err instanceof DOMException) {
-          if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-            setErrorMessage("Camera access was denied. Please allow camera permissions.");
-          } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-            setErrorMessage("No camera found. Please connect a webcam and try again.");
-          } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+          if (
+            err.name === "NotAllowedError" ||
+            err.name === "PermissionDeniedError"
+          ) {
+            setErrorMessage(
+              "Camera access was denied. Please allow camera permissions."
+            );
+          } else if (
+            err.name === "NotFoundError" ||
+            err.name === "DevicesNotFoundError"
+          ) {
+            setErrorMessage(
+              "No camera found. Please connect a webcam and try again."
+            );
+          } else if (
+            err.name === "NotReadableError" ||
+            err.name === "TrackStartError"
+          ) {
             setErrorMessage("Camera is already in use by another application.");
           } else {
             setErrorMessage("Could not access camera: " + err.message);
           }
         } else {
-          setErrorMessage("An unexpected error occurred while accessing the camera.");
+          setErrorMessage(
+            "An unexpected error occurred while accessing the camera."
+          );
         }
 
         setStandaloneState("error");

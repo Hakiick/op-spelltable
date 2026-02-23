@@ -42,22 +42,30 @@ test.describe("Navigation & Routing", () => {
 
   test("login page is accessible", async ({ page }) => {
     await page.goto("/auth/login");
-    await expect(page.locator("[data-slot='card-title']")).toContainText("Sign in");
+    await expect(page.locator("[data-slot='card-title']")).toContainText(
+      "Sign in"
+    );
   });
 
   test("register page is accessible", async ({ page }) => {
     await page.goto("/auth/register");
-    await expect(page.locator("[data-slot='card-title']")).toContainText("Create account");
+    await expect(page.locator("[data-slot='card-title']")).toContainText(
+      "Create account"
+    );
   });
 
   test("login and register pages link to each other", async ({ page }) => {
     await page.goto("/auth/login");
     await page.getByRole("link", { name: /register/i }).click();
     await page.waitForURL("/auth/register");
-    await expect(page.locator("[data-slot='card-title']")).toContainText("Create account");
+    await expect(page.locator("[data-slot='card-title']")).toContainText(
+      "Create account"
+    );
 
     await page.getByRole("link", { name: /sign in/i }).click();
     await page.waitForURL("/auth/login");
-    await expect(page.locator("[data-slot='card-title']")).toContainText("Sign in");
+    await expect(page.locator("[data-slot='card-title']")).toContainText(
+      "Sign in"
+    );
   });
 });

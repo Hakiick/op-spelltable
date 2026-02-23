@@ -1,11 +1,6 @@
 import type { CardData } from "./card";
 
-export type GamePhase =
-  | "refresh"
-  | "draw"
-  | "don"
-  | "main"
-  | "end";
+export type GamePhase = "refresh" | "draw" | "don" | "main" | "end";
 
 export type GameStatus = "waiting" | "playing" | "finished";
 

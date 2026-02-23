@@ -237,7 +237,9 @@ describe("joinRoom", () => {
   it("throws when room is not found", async () => {
     vi.mocked(prisma.room.findUnique).mockResolvedValue(null);
 
-    await expect(joinRoom("NOTFOUND")).rejects.toThrow("Room not found: NOTFOUND");
+    await expect(joinRoom("NOTFOUND")).rejects.toThrow(
+      "Room not found: NOTFOUND"
+    );
   });
 
   it("throws when room is not in waiting status", async () => {
@@ -273,7 +275,9 @@ describe("startGame", () => {
   it("throws when room is not found", async () => {
     vi.mocked(prisma.room.findUnique).mockResolvedValue(null);
 
-    await expect(startGame("NOTFOUND")).rejects.toThrow("Room not found: NOTFOUND");
+    await expect(startGame("NOTFOUND")).rejects.toThrow(
+      "Room not found: NOTFOUND"
+    );
   });
 
   it("throws when room is not in ready status", async () => {

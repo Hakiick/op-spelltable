@@ -287,7 +287,9 @@ export default function RoomClient({ room }: RoomClientProps) {
             </svg>
           )}
         </button>
-        <p className="text-xs text-gray-500">Share this code with your opponent</p>
+        <p className="text-xs text-gray-500">
+          Share this code with your opponent
+        </p>
       </div>
 
       {/* Video grid */}
@@ -306,7 +308,8 @@ export default function RoomClient({ room }: RoomClientProps) {
           {state.status === "idle" && "Waiting for opponent to join..."}
           {state.status === "connecting" && "Establishing connection..."}
           {state.status === "connected" && "Connected — game can begin!"}
-          {state.status === "disconnected" && "Connection lost — attempting to reconnect..."}
+          {state.status === "disconnected" &&
+            "Connection lost — attempting to reconnect..."}
           {state.status === "failed" && (state.error ?? "Connection failed.")}
         </p>
       </footer>

@@ -40,34 +40,38 @@ src/
 
 ## Séparation des responsabilités
 
-| Couche | Responsabilité | Emplacement |
-|--------|---------------|-------------|
-| UI | Rendu, interactions utilisateur | `src/components/` |
-| Hooks | Logique réactive, side effects | `src/hooks/` |
-| Lib | Logique métier pure, services | `src/lib/` |
-| Types | Définitions de types partagés | `src/types/` |
-| API | Endpoints HTTP, validation | `src/app/api/` |
-| DB | Requêtes Prisma, seeds | `prisma/`, `src/lib/database/` |
+| Couche | Responsabilité                  | Emplacement                    |
+| ------ | ------------------------------- | ------------------------------ |
+| UI     | Rendu, interactions utilisateur | `src/components/`              |
+| Hooks  | Logique réactive, side effects  | `src/hooks/`                   |
+| Lib    | Logique métier pure, services   | `src/lib/`                     |
+| Types  | Définitions de types partagés   | `src/types/`                   |
+| API    | Endpoints HTTP, validation      | `src/app/api/`                 |
+| DB     | Requêtes Prisma, seeds          | `prisma/`, `src/lib/database/` |
 
 ## Patterns obligatoires
 
 ### Data fetching
+
 - **Server Components** : fetch directement dans le composant (pas de useEffect)
 - **Client Components** : utiliser des hooks custom (`useSWR` ou `useQuery`)
 - **Mutations** : Server Actions ou API Routes
 
 ### State management
+
 - **Local state** : `useState` pour l'état local au composant
 - **Shared state** : React Context pour l'état partagé dans un arbre
 - **Game state** : Custom hook `useGameState` centralisé
 - **WebRTC state** : Custom hook `useWebRTC` encapsulant PeerJS
 
 ### WebRTC Architecture
+
 - **Signaling** : WebSocket (Socket.io) ou API Routes pour l'échange SDP/ICE
 - **Media** : PeerJS pour simplifier la gestion P2P
 - **Flux** : Peer-to-peer direct, pas de media server
 
 ### ML Pipeline Architecture
+
 - **Côté client** : TensorFlow.js pour la latence minimale
 - **Pipeline** : Capture frame → Resize/Normalize → Inference → Match → Display
 - **Référence** : Base d'images de cartes en local ou CDN

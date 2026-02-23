@@ -19,9 +19,7 @@ export default function AuthLayout({
         >
           OP SpellTable
         </Link>
-        <p className="mt-1 text-sm text-gray-400">
-          One Piece TCG Remote Play
-        </p>
+        <p className="mt-1 text-sm text-gray-400">One Piece TCG Remote Play</p>
       </div>
       {children}
     </div>

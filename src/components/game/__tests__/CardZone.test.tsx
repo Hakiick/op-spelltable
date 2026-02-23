@@ -67,7 +67,9 @@ describe("CardZone — variant: characters", () => {
 
   it("renders a character area list", () => {
     render(<CardZone variant="characters" label="Characters" cards={[]} />);
-    expect(screen.getByRole("list", { name: "Character area" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("list", { name: "Character area" })
+    ).toBeInTheDocument();
   });
 });
 
@@ -97,14 +99,11 @@ describe("CardZone — variant: don", () => {
 
   it("displays active and rested counts", () => {
     render(
-      <CardZone
-        variant="don"
-        label="DON!!"
-        activeCount={6}
-        restedCount={2}
-      />
+      <CardZone variant="don" label="DON!!" activeCount={6} restedCount={2} />
     );
-    expect(screen.getByLabelText("DON!! Active: 6, Rested: 2")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("DON!! Active: 6, Rested: 2")
+    ).toBeInTheDocument();
     expect(screen.getByText("6")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
   });

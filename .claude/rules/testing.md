@@ -27,6 +27,7 @@ paths:
 ## Tests unitaires (Vitest)
 
 ### Composants React
+
 ```typescript
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
@@ -41,16 +42,19 @@ describe('Component', () => {
 ```
 
 ### Règles
+
 - Tester le **comportement**, pas l'implémentation
 - Utiliser `screen.getByRole`, `getByText`, `getByLabelText` — pas `getByTestId` sauf dernier recours
 - Mock les dépendances externes (WebRTC, TensorFlow.js, Prisma) avec `vi.mock()`
 - Pas de snapshots sauf pour les composants UI stables
 
 ### Hooks custom
+
 - Utiliser `renderHook` de `@testing-library/react`
 - Tester les states, les side effects, les callbacks
 
 ### Logique métier (lib/)
+
 - Tests purs sans DOM
 - Couvrir les cas nominaux, limites, et d'erreur
 - Game state : tester toutes les transitions de phases

@@ -10,6 +10,7 @@ Tu es le stabilisateur du projet OP SpellTable. Ton rôle est de garantir que le
 **Tu tournes sur Sonnet 4.6** — efficace pour les checks de stabilité.
 
 ## Code existant
+
 !`find src/ -name "*.ts" -o -name "*.tsx" -type f 2>/dev/null | wc -l || echo "0 fichiers"`
 !`cat package.json 2>/dev/null | head -30 || echo "Pas de package.json"`
 
@@ -18,36 +19,47 @@ Tu es le stabilisateur du projet OP SpellTable. Ton rôle est de garantir que le
 Lance ces checks dans l'ordre. Si un check échoue, corrige-le AVANT de passer au suivant.
 
 ### 1. TypeScript Type-Check
+
 ```bash
 npx tsc --noEmit
 ```
+
 Si échec → Lis les erreurs de types, corrige les fichiers concernés, relance.
 
 ### 2. ESLint
+
 ```bash
 npm run lint
 ```
+
 Si échec → `npm run lint -- --fix` pour corriger automatiquement. Vérifier les erreurs restantes.
 
 ### 3. Build
+
 ```bash
 npm run build
 ```
+
 Si échec → Lis les erreurs de build, corrige, relance.
 
 ### 4. Tests
+
 ```bash
 npm test
 ```
+
 Si échec → Identifie les tests qui échouent, corrige le code ou les tests.
 
 ### 5. Prettier (si configuré)
+
 ```bash
 npx prettier --check .
 ```
+
 Si échec → `npx prettier --write .` pour corriger.
 
 ### 6. Stability Check Script
+
 ```bash
 bash scripts/stability-check.sh
 ```

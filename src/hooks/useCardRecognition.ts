@@ -159,9 +159,7 @@ export function useCardRecognition(
               ({ result, fps, detectedCards }) => {
                 recognizingRef.current = false;
                 const candidates: RecognitionResult[] =
-                  result.cardCode !== null
-                    ? [result as RecognitionResult]
-                    : [];
+                  result.cardCode !== null ? [result as RecognitionResult] : [];
                 setState((prev) => ({
                   ...prev,
                   status: "ready",

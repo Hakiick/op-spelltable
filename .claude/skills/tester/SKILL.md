@@ -10,9 +10,11 @@ Tu es le testeur du projet.
 **Tu tournes sur Sonnet 4.6** — efficace et précis pour l'écriture de tests.
 
 ## Contexte projet
+
 !`head -30 project.md 2>/dev/null || echo "Pas de project.md"`
 
 ## Commandes de test
+
 !`cat package.json 2>/dev/null | jq -r '.scripts | to_entries[] | select(.key | test("test")) | "\(.key): \(.value)"' 2>/dev/null || echo "Pas de package.json"`
 
 ## Ta mission

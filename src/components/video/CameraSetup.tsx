@@ -21,7 +21,10 @@ interface CameraSetupProps {
   onApply: () => Promise<void>;
 }
 
-const RESOLUTIONS: Array<{ value: CameraSettings["resolution"]; label: string }> = [
+const RESOLUTIONS: Array<{
+  value: CameraSettings["resolution"];
+  label: string;
+}> = [
   { value: "auto", label: "Auto" },
   { value: "720p", label: "720p HD" },
   { value: "480p", label: "480p SD" },
@@ -127,7 +130,9 @@ export default function CameraSetup({
 
           {/* Resolution */}
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-gray-300">Resolution</span>
+            <span className="text-sm font-medium text-gray-300">
+              Resolution
+            </span>
             <div className="grid grid-cols-2 gap-2">
               {RESOLUTIONS.map(({ value, label }) => (
                 <button
@@ -149,7 +154,12 @@ export default function CameraSetup({
 
           {/* Mirror toggle */}
           <div className="flex items-center justify-between">
-            <span id="mirror-label" className="text-sm font-medium text-gray-300">Mirror video</span>
+            <span
+              id="mirror-label"
+              className="text-sm font-medium text-gray-300"
+            >
+              Mirror video
+            </span>
             <button
               type="button"
               role="switch"

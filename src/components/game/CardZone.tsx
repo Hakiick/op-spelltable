@@ -72,9 +72,7 @@ function CardSlot({
     );
   }
 
-  const handleClick = onClick
-    ? () => onClick(card.cardId)
-    : undefined;
+  const handleClick = onClick ? () => onClick(card.cardId) : undefined;
 
   const handleKeyDown = onClick
     ? (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -228,7 +226,9 @@ export default function CardZone({
               tabIndex={leader ? 0 : undefined}
               className={`relative h-20 w-14 overflow-hidden rounded border-2 border-amber-500 bg-gray-800 md:h-28 md:w-20${leader ? " cursor-pointer transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400" : ""}`}
               aria-label={leader ? leader.name : "Empty leader slot"}
-              onClick={leader ? () => setSelectedCardCode(leader.cardId) : undefined}
+              onClick={
+                leader ? () => setSelectedCardCode(leader.cardId) : undefined
+              }
               onKeyDown={
                 leader
                   ? (e) => {
@@ -254,7 +254,9 @@ export default function CardZone({
                     <span className="text-center text-[9px] font-semibold leading-tight text-amber-200">
                       {leader.name}
                     </span>
-                    <span className="text-[8px] text-gray-400">{leader.cardId}</span>
+                    <span className="text-[8px] text-gray-400">
+                      {leader.cardId}
+                    </span>
                     {leader.life !== null && (
                       <span className="text-[8px] text-amber-400">
                         Life: {leader.life}
@@ -307,11 +309,15 @@ export default function CardZone({
           >
             <div className="flex items-center gap-2">
               <span className="text-xs text-green-400">Active</span>
-              <span className="text-lg font-bold text-white">{activeCount}</span>
+              <span className="text-lg font-bold text-white">
+                {activeCount}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-orange-400">Rested</span>
-              <span className="text-lg font-bold text-white">{restedCount}</span>
+              <span className="text-lg font-bold text-white">
+                {restedCount}
+              </span>
             </div>
           </div>
         );
@@ -362,9 +368,7 @@ export default function CardZone({
         <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
           {label}
         </span>
-        <div
-          className={`rounded-lg border ${borderColour} bg-gray-900 p-1.5`}
-        >
+        <div className={`rounded-lg border ${borderColour} bg-gray-900 p-1.5`}>
           {renderContent()}
         </div>
       </div>

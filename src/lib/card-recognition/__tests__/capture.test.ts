@@ -7,7 +7,11 @@ class MockImageData {
   width: number;
   height: number;
 
-  constructor(data: Uint8ClampedArray | number, width: number, height?: number) {
+  constructor(
+    data: Uint8ClampedArray | number,
+    width: number,
+    height?: number
+  ) {
     if (typeof data === "number") {
       this.width = data;
       this.height = width;
@@ -87,7 +91,11 @@ describe("captureFrame", () => {
   });
 
   it("returns null when video dimensions are zero", () => {
-    const video = makeMockVideo({ readyState: 4, videoWidth: 0, videoHeight: 0 });
+    const video = makeMockVideo({
+      readyState: 4,
+      videoWidth: 0,
+      videoHeight: 0,
+    });
     const result = captureFrame(video);
     expect(result).toBeNull();
   });
@@ -126,7 +134,10 @@ describe("captureFrame", () => {
     });
     const crop = { x: 100, y: 50, width: 200, height: 150 };
 
-    const croppedImageData = new MockImageData(200, 150) as unknown as ImageData;
+    const croppedImageData = new MockImageData(
+      200,
+      150
+    ) as unknown as ImageData;
     (mockCtx.getImageData as ReturnType<typeof vi.fn>).mockReturnValue(
       croppedImageData
     );

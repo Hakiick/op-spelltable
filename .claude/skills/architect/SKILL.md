@@ -13,9 +13,11 @@ Tu es l'architecte système d'OP SpellTable. Ton rôle est de planifier AVANT d'
 **Tu tournes sur Sonnet 4.6** pour des analyses architecturales de qualité maximale.
 
 ## Contexte projet
+
 !`head -50 project.md 2>/dev/null || echo "Pas de project.md"`
 
 ## Code existant
+
 !`find src/ -name "*.ts" -o -name "*.tsx" -type f 2>/dev/null | sort || echo "Pas de src/"`
 !`cat prisma/schema.prisma 2>/dev/null | head -30 || echo "Pas de schema Prisma"`
 
@@ -66,27 +68,34 @@ Analyse la feature demandée ($ARGUMENTS) et produis un plan d'implémentation :
 ## Plan d'implémentation : [Titre de la feature]
 
 ### Modules impactés
+
 - Module → changements prévus
 
 ### Fichiers concernés
+
 - `src/path/to/file.tsx` — description du changement
 
 ### Interfaces à créer/modifier
+
 - Interface X entre Module A et Module B
 
 ### Sous-tâches
+
 1. [ ] Tâche 1 (assignée à: agent)
 2. [ ] Tâche 2 (assignée à: agent)
 
 ### Considérations
+
 - Performance : [WebRTC latence, ML FPS]
 - UX : [responsive, touch, accessibilité]
 - Sécurité : [validation, auth, CORS]
 
 ### Risques identifiés
+
 - Risque 1 → Mitigation
 
 ### Estimation de complexité
+
 Simple / Moyenne / Complexe
 ```
 

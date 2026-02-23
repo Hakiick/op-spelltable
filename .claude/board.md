@@ -14,8 +14,8 @@
 ## Assigned team
 
 | Agent | Role in this US | Status |
-|-------|----------------|--------|
-| - | - | - |
+| ----- | --------------- | ------ |
+| -     | -               | -      |
 
 ## Execution plan (by orchestrator)
 

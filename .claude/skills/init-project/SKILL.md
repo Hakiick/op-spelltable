@@ -10,6 +10,7 @@ Tu initialises le projet. Le setup est **entièrement automatique** — tu analy
 **IMPORTANT : Tu tournes sur Opus 4.6.** Les agents que tu génères doivent spécifier `model: sonnet` dans leur SKILL.md. **Tous les agents tournent sur Sonnet 4.6.**
 
 ## Contexte du projet
+
 !`cat project.md 2>/dev/null || echo "ERREUR: project.md manquant. Crée-le d'abord."`
 
 ---
@@ -43,8 +44,10 @@ Tu initialises le projet. Le setup est **entièrement automatique** — tu analy
 Pour chaque US, génère :
 
 **Critères d'acceptance** — conditions vérifiables pour considérer l'US comme terminée :
+
 ```markdown
 ### Critères d'acceptance
+
 - [ ] Le composant est responsive (mobile, tablette, desktop)
 - [ ] Les touch targets font minimum 44x44px
 - [ ] Lighthouse mobile > 90
@@ -61,13 +64,13 @@ Analyse TOUTES les US entre elles pour détecter les dépendances **même si l'u
 
 **Règles de détection automatique :**
 
-| Signal | Type de dépendance |
-|--------|--------------------|
-| US-B mentionne un modèle/table créé dans US-A | `après:US-A` |
-| US-B utilise un endpoint/service de US-A | `après:US-A` |
-| US-B a besoin de l'auth et US-A = auth | `après:US-A` |
-| US-A et US-B modifient les mêmes fichiers | `partage:US-A` |
-| US-B ajoute une fonctionnalité à ce que US-A construit | `enrichit:US-A` |
+| Signal                                                 | Type de dépendance |
+| ------------------------------------------------------ | ------------------ |
+| US-B mentionne un modèle/table créé dans US-A          | `après:US-A`       |
+| US-B utilise un endpoint/service de US-A               | `après:US-A`       |
+| US-B a besoin de l'auth et US-A = auth                 | `après:US-A`       |
+| US-A et US-B modifient les mêmes fichiers              | `partage:US-A`     |
+| US-B ajoute une fonctionnalité à ce que US-A construit | `enrichit:US-A`    |
 
 ### 1.5.4 Proposer un US-00 "Setup initial" si nécessaire
 
@@ -88,13 +91,13 @@ Lis `project.md` section "Stack technique" et identifie tous les éléments de l
 
 ### 2.2 Déterminer le type de projet
 
-| Pattern détecté | Type de projet |
-|-----------------|----------------|
-| Next.js + App Router | Full-stack SSR |
-| Express/Fastify + DB | API Backend |
-| React/Vue seul | SPA Frontend |
-| Astro/Gatsby | SSG |
-| React Native / Flutter | Mobile natif |
+| Pattern détecté           | Type de projet      |
+| ------------------------- | ------------------- |
+| Next.js + App Router      | Full-stack SSR      |
+| Express/Fastify + DB      | API Backend         |
+| React/Vue seul            | SPA Frontend        |
+| Astro/Gatsby              | SSG                 |
+| React Native / Flutter    | Mobile natif        |
 | PWA flags dans project.md | Progressive Web App |
 
 ### 2.3 Identifier les domaines fonctionnels
@@ -144,20 +147,21 @@ bash scripts/search-skills.sh --stack
 Analyse la stack et les US pour créer les bons agents.
 
 **Agents mobile-first pré-configurés** (déjà présents dans le template) :
+
 - `mobile-dev` — Développeur mobile-first (responsive, touch, viewport)
 - `responsive-tester` — Testeur responsive (breakpoints, viewports, accessibility)
 - `pwa-dev` — Spécialiste PWA (service worker, manifest, offline)
 
 **Agents supplémentaires à générer selon la stack** :
 
-| Stack / Besoin | Agent à générer | Modèle recommandé |
-|----------------|-----------------|-------------------|
-| Framework frontend (Next.js, React...) | `frontend-dev` | sonnet |
-| Framework backend (Express, Fastify...) | `api-dev` | sonnet |
-| Base de données + ORM | `db-architect` | sonnet |
-| Tests E2E (Playwright, Cypress) | `e2e-tester` | sonnet |
-| UI complexe | `ui-dev` | sonnet |
-| DevOps/CI | `devops` | sonnet |
+| Stack / Besoin                          | Agent à générer | Modèle recommandé |
+| --------------------------------------- | --------------- | ----------------- |
+| Framework frontend (Next.js, React...)  | `frontend-dev`  | sonnet            |
+| Framework backend (Express, Fastify...) | `api-dev`       | sonnet            |
+| Base de données + ORM                   | `db-architect`  | sonnet            |
+| Tests E2E (Playwright, Cypress)         | `e2e-tester`    | sonnet            |
+| UI complexe                             | `ui-dev`        | sonnet            |
+| DevOps/CI                               | `devops`        | sonnet            |
 
 **Règle** : ne génère PAS d'agents inutiles.
 
@@ -186,6 +190,7 @@ Détecte les dépendances et vérifie qu'il n'y a pas de cycles.
 ## Phase 8 — Créer les labels et issues GitHub
 
 ### Labels
+
 ```bash
 gh label create "task" --description "US créée, pas encore commencée" --color "0075ca" --force
 gh label create "in-progress" --description "US en cours de développement" --color "e4e669" --force
@@ -206,6 +211,7 @@ Pour chaque US, crée une issue avec description, dépendances, équipe agentiqu
 ## Phase 9 — Résumé
 
 Affiche un rapport complet avec :
+
 - Stack détectée
 - Règles générées
 - Agents spécialisés créés (avec modèle)

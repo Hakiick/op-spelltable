@@ -70,12 +70,16 @@ describe("CameraSetup", () => {
   it("opens the dialog when trigger button is clicked", async () => {
     renderCameraSetup();
 
-    const triggerBtn = screen.getByRole("button", { name: /open camera settings/i });
+    const triggerBtn = screen.getByRole("button", {
+      name: /open camera settings/i,
+    });
     fireEvent.click(triggerBtn);
 
     await waitFor(() => {
       // Dialog should be open — the dialog title heading should be visible
-      expect(screen.getByRole("heading", { name: /camera settings/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: /camera settings/i })
+      ).toBeInTheDocument();
     });
   });
 
@@ -109,7 +113,9 @@ describe("CameraSetup", () => {
     fireEvent.click(screen.getByRole("button", { name: /camera settings/i }));
 
     await waitFor(() => {
-      const mirrorSwitch = screen.getByRole("switch", { name: /mirror video/i });
+      const mirrorSwitch = screen.getByRole("switch", {
+        name: /mirror video/i,
+      });
       expect(mirrorSwitch).toHaveAttribute("aria-checked", "true");
     });
   });
@@ -122,7 +128,9 @@ describe("CameraSetup", () => {
     fireEvent.click(screen.getByRole("button", { name: /camera settings/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole("switch", { name: /mirror video/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("switch", { name: /mirror video/i })
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("switch", { name: /mirror video/i }));
@@ -164,9 +172,7 @@ describe("CameraSetup", () => {
     fireEvent.click(screen.getByRole("button", { name: /camera settings/i }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/no cameras detected/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/no cameras detected/i)).toBeInTheDocument();
     });
   });
 

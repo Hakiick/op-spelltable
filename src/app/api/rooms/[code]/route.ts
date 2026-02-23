@@ -67,8 +67,10 @@ export async function PATCH(
     }> = {};
 
     if (body.hostPeerId !== undefined) updateData.hostPeerId = body.hostPeerId;
-    if (body.guestPeerId !== undefined) updateData.guestPeerId = body.guestPeerId;
-    if (body.guestUserId !== undefined) updateData.guestUserId = body.guestUserId;
+    if (body.guestPeerId !== undefined)
+      updateData.guestPeerId = body.guestPeerId;
+    if (body.guestUserId !== undefined)
+      updateData.guestUserId = body.guestUserId;
     if (body.status !== undefined) updateData.status = body.status;
 
     const room = await updateRoom(code, updateData);

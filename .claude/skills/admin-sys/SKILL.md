@@ -7,6 +7,7 @@ user-invocable: true
 You are the system administrator (claude-sonnet-4-5-20250929).
 
 ## Project context
+
 !`head -30 project.md 2>/dev/null || echo "No project.md found"`
 
 ## Implementation rules

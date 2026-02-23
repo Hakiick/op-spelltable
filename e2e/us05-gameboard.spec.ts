@@ -22,7 +22,9 @@ test.describe("US-05/06 — GameBoard & Compteurs", () => {
   test("displays turn phase indicator", async ({ page }) => {
     await page.goto(`/game/${roomId}`);
     // Phase indicator shows all phase labels: Refresh, Draw, DON!!, Main, End
-    await expect(page.locator("[data-testid='turn-phase-indicator']")).toBeVisible();
+    await expect(
+      page.locator("[data-testid='turn-phase-indicator']")
+    ).toBeVisible();
     // At least the "Main" phase should be visible (default phase)
     await expect(page.locator("text=Main").first()).toBeVisible();
   });
@@ -48,7 +50,9 @@ test.describe("US-05/06 — GameBoard & Compteurs", () => {
     await expect(page.locator("text=Life").first()).toBeVisible();
   });
 
-  test("card zones are present (Leader, Characters, Stage)", async ({ page }) => {
+  test("card zones are present (Leader, Characters, Stage)", async ({
+    page,
+  }) => {
     await page.goto(`/game/${roomId}`);
     await expect(page.locator("text=Leader").first()).toBeVisible();
     await expect(page.locator("text=Characters").first()).toBeVisible();

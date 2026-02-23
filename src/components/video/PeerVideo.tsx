@@ -59,7 +59,9 @@ export default function PeerVideo({
           </div>
 
           <div className="flex flex-col items-center gap-1">
-            <p className="text-sm font-medium text-gray-300">Waiting for opponent...</p>
+            <p className="text-sm font-medium text-gray-300">
+              Waiting for opponent...
+            </p>
             <div className="flex gap-1">
               <span
                 className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-500"

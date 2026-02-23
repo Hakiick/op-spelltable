@@ -65,7 +65,12 @@ describe("useCardRecognition", () => {
 
     mockBridge.initialize = vi.fn().mockResolvedValue(undefined);
     mockBridge.recognize = vi.fn().mockResolvedValue({
-      result: { cardCode: null, confidence: 0, candidateCount: 0, durationMs: 5 },
+      result: {
+        cardCode: null,
+        confidence: 0,
+        candidateCount: 0,
+        durationMs: 5,
+      },
       fps: 0,
     });
     mockBridge.dispose = vi.fn();

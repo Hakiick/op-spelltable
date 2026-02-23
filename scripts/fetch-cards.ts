@@ -109,12 +109,14 @@ interface SetInfo {
 }
 
 function parseNullableString(val: string | null | undefined): string | null {
-  if (!val || val === "NULL" || val === "null" || val.trim() === "") return null;
+  if (!val || val === "NULL" || val === "null" || val.trim() === "")
+    return null;
   return val;
 }
 
 function parseNullableNumber(val: string | null | undefined): number | null {
-  if (!val || val === "NULL" || val === "null" || val.trim() === "") return null;
+  if (!val || val === "NULL" || val === "null" || val.trim() === "")
+    return null;
   const num = Number(val);
   return isNaN(num) ? null : num;
 }

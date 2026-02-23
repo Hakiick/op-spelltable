@@ -1,12 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { LobbyRoom } from "@/types/lobby";
 
@@ -46,7 +41,10 @@ export default function LobbyList({ rooms, loading = false }: LobbyListProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-3" aria-label="Chargement des parties...">
+      <div
+        className="flex flex-col gap-3"
+        aria-label="Chargement des parties..."
+      >
         <RoomSkeleton />
         <RoomSkeleton />
         <RoomSkeleton />
@@ -65,7 +63,11 @@ export default function LobbyList({ rooms, loading = false }: LobbyListProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3" role="list" aria-label="Parties disponibles">
+    <div
+      className="flex flex-col gap-3"
+      role="list"
+      aria-label="Parties disponibles"
+    >
       {rooms.map((room, index) => (
         <Card
           key={room.id}
@@ -86,8 +88,7 @@ export default function LobbyList({ rooms, loading = false }: LobbyListProps) {
             <div className="flex flex-col gap-0.5 text-xs text-gray-400">
               {room.hostName && (
                 <span>
-                  Hôte :{" "}
-                  <span className="text-gray-200">{room.hostName}</span>
+                  Hôte : <span className="text-gray-200">{room.hostName}</span>
                 </span>
               )}
               <span>{timeAgo(room.createdAt)}</span>

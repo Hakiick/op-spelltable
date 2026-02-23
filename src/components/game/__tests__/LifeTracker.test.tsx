@@ -28,9 +28,7 @@ describe("LifeTracker — rendering", () => {
   it("renders a revealed card correctly", () => {
     const cards = [true, false, true]; // middle card is revealed
     render(<LifeTracker lifeCards={cards} />);
-    expect(
-      screen.getByLabelText("Life card 2 — revealed")
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Life card 2 — revealed")).toBeInTheDocument();
   });
 
   it("renders 0 life cards with empty state placeholder", () => {

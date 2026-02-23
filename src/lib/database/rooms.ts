@@ -41,7 +41,9 @@ export async function createRoom(
     });
   }
 
-  throw new Error("Failed to generate a unique room code after multiple retries");
+  throw new Error(
+    "Failed to generate a unique room code after multiple retries"
+  );
 }
 
 /**
@@ -109,7 +111,9 @@ export async function joinRoom(
     throw new Error(`Room not found: ${roomCode}`);
   }
   if (room.status !== "waiting") {
-    throw new Error(`Room ${roomCode} is not available for joining (status: ${room.status})`);
+    throw new Error(
+      `Room ${roomCode} is not available for joining (status: ${room.status})`
+    );
   }
 
   return prisma.room.update({
@@ -131,7 +135,9 @@ export async function startGame(roomCode: string): Promise<Room> {
     throw new Error(`Room not found: ${roomCode}`);
   }
   if (room.status !== "ready") {
-    throw new Error(`Room ${roomCode} cannot start game (status: ${room.status})`);
+    throw new Error(
+      `Room ${roomCode} cannot start game (status: ${room.status})`
+    );
   }
 
   return prisma.room.update({

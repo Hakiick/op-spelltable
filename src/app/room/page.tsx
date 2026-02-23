@@ -65,7 +65,9 @@ export default function RoomPage() {
         <h1 className="text-4xl font-bold tracking-tight text-white">
           OP SpellTable
         </h1>
-        <p className="mt-2 text-gray-400">Play One Piece TCG remotely with a friend</p>
+        <p className="mt-2 text-gray-400">
+          Play One Piece TCG remotely with a friend
+        </p>
       </div>
 
       <div className="flex w-full max-w-md flex-col gap-4">
@@ -76,7 +78,8 @@ export default function RoomPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-400">
-              Start a new game session. Share the generated room code with your opponent.
+              Start a new game session. Share the generated room code with your
+              opponent.
             </p>
           </CardContent>
           <CardFooter>
@@ -101,7 +104,9 @@ export default function RoomPage() {
         {/* Divider */}
         <div className="relative flex items-center">
           <div className="flex-1 border-t border-gray-800" />
-          <span className="mx-4 text-xs uppercase tracking-widest text-gray-600">or</span>
+          <span className="mx-4 text-xs uppercase tracking-widest text-gray-600">
+            or
+          </span>
           <div className="flex-1 border-t border-gray-800" />
         </div>
 
@@ -131,7 +136,11 @@ export default function RoomPage() {
                 aria-describedby={joinError ? "join-error" : undefined}
               />
               {joinError && (
-                <p id="join-error" className="text-xs text-red-400" role="alert">
+                <p
+                  id="join-error"
+                  className="text-xs text-red-400"
+                  role="alert"
+                >
                   {joinError}
                 </p>
               )}

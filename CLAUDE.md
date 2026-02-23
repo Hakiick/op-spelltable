@@ -35,30 +35,30 @@ Contexte du projet : @project.md
 
 ### Skills core (toujours présents)
 
-| Skill | Usage |
-|-------|-------|
-| `/init-project` | **Setup automatique** : analyse le projet, brainstorm les US, génère agents + règles + issues |
-| `/forge` | **Team Lead** : décompose une US, délègue aux agents spécialisés, feedback loops, livre stable |
-| `/next-feature` | Pipeline linéaire simple (alternative à /forge pour les features simples) |
-| `/reviewer` | Revue de code qualité + sécurité |
-| `/stabilizer` | Vérifie build + tests + lint + type-check |
+| Skill           | Usage                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| `/init-project` | **Setup automatique** : analyse le projet, brainstorm les US, génère agents + règles + issues  |
+| `/forge`        | **Team Lead** : décompose une US, délègue aux agents spécialisés, feedback loops, livre stable |
+| `/next-feature` | Pipeline linéaire simple (alternative à /forge pour les features simples)                      |
+| `/reviewer`     | Revue de code qualité + sécurité                                                               |
+| `/stabilizer`   | Vérifie build + tests + lint + type-check                                                      |
 
 ### Skills spécialisés OP SpellTable
 
-| Skill | Usage |
-|-------|-------|
-| `/architect` | Architecte système — design global, interfaces entre modules (WebRTC / UI / ML / DB), ADR |
-| `/frontend` | Spécialiste frontend — composants React/Next.js, responsive mobile-first, Tailwind, WebRTC UI |
-| `/backend` | Spécialiste backend — API Routes Next.js, WebRTC signaling, Prisma, WebSockets, game state |
-| `/ml-engineer` | Spécialiste ML — reconnaissance de cartes, TensorFlow.js, pipeline computer vision |
+| Skill          | Usage                                                                                         |
+| -------------- | --------------------------------------------------------------------------------------------- |
+| `/architect`   | Architecte système — design global, interfaces entre modules (WebRTC / UI / ML / DB), ADR     |
+| `/frontend`    | Spécialiste frontend — composants React/Next.js, responsive mobile-first, Tailwind, WebRTC UI |
+| `/backend`     | Spécialiste backend — API Routes Next.js, WebRTC signaling, Prisma, WebSockets, game state    |
+| `/ml-engineer` | Spécialiste ML — reconnaissance de cartes, TensorFlow.js, pipeline computer vision            |
 
 ### Skills fallback (génériques)
 
-| Skill | Usage |
-|-------|-------|
-| `/developer` | Implémenteur générique |
-| `/tester` | Écrit et lance les tests |
-| `/devops` | CI/CD, Docker, deployment |
+| Skill        | Usage                     |
+| ------------ | ------------------------- |
+| `/developer` | Implémenteur générique    |
+| `/tester`    | Écrit et lance les tests  |
+| `/devops`    | CI/CD, Docker, deployment |
 
 ---
 
@@ -150,6 +150,7 @@ bash scripts/forge-add-agents.sh --list
 5. **Décomposer en sous-tâches** (TodoWrite)
 
 **Ordre d'exécution :**
+
 - `architect` → en premier (planification)
 - `backend` → API, DB, signaling
 - `frontend` → composants UI, intégration WebRTC
@@ -172,21 +173,21 @@ Tous les agents Task() utilisent `model: "sonnet"`.
 
 #### Évaluation par le Team Lead
 
-| Après agent | Check | Si échec |
-|------------|-------|----------|
-| `backend` | `npx tsc --noEmit && npm test` | → Renvoyer avec erreurs |
-| `frontend` | `npm run build && npm run lint` | → Renvoyer avec build log |
-| `ml-engineer` | Tests pipeline ML | → Renvoyer |
-| `reviewer` | Critiques vs suggestions | → Critiques = renvoyer au dev |
-| `stabilizer` | `bash scripts/stability-check.sh` | → Simple = corrige ; Complexe = renvoyer |
+| Après agent   | Check                             | Si échec                                 |
+| ------------- | --------------------------------- | ---------------------------------------- |
+| `backend`     | `npx tsc --noEmit && npm test`    | → Renvoyer avec erreurs                  |
+| `frontend`    | `npm run build && npm run lint`   | → Renvoyer avec build log                |
+| `ml-engineer` | Tests pipeline ML                 | → Renvoyer                               |
+| `reviewer`    | Critiques vs suggestions          | → Critiques = renvoyer au dev            |
+| `stabilizer`  | `bash scripts/stability-check.sh` | → Simple = corrige ; Complexe = renvoyer |
 
 #### Feedback loops
 
-| Boucle | Max itérations |
-|--------|---------------|
-| dev ↔ tester | 3 |
-| dev ↔ reviewer | 2 |
-| stabilizer retry | 5 |
+| Boucle           | Max itérations |
+| ---------------- | -------------- |
+| dev ↔ tester     | 3              |
+| dev ↔ reviewer   | 2              |
+| stabilizer retry | 5              |
 
 ### Phase 4 — Rebase final + Merge
 
@@ -210,29 +211,29 @@ git checkout main && git pull --rebase origin main
 
 ### Gestion des erreurs
 
-| Situation | Décision |
-|-----------|----------|
-| Build échoue | → Renvoyer au dev concerné avec les erreurs |
-| Tests échouent | → Dev corrige → Tester re-vérifie |
-| Type errors | → Dev corrige les types |
-| Lint errors | → Stabilizer corrige directement |
-| Security critique | → Dev corrige → Reviewer re-check |
-| Rebase avec conflits | → Résoudre → Stabilizer re-check tout |
-| > 3 itérations dev/test | → Alerter l'utilisateur |
-| > 5 itérations stabilizer | → Alerter l'utilisateur |
-| Dépendance bloquée | → Marquer blocked, passer à une autre US |
+| Situation                 | Décision                                    |
+| ------------------------- | ------------------------------------------- |
+| Build échoue              | → Renvoyer au dev concerné avec les erreurs |
+| Tests échouent            | → Dev corrige → Tester re-vérifie           |
+| Type errors               | → Dev corrige les types                     |
+| Lint errors               | → Stabilizer corrige directement            |
+| Security critique         | → Dev corrige → Reviewer re-check           |
+| Rebase avec conflits      | → Résoudre → Stabilizer re-check tout       |
+| > 3 itérations dev/test   | → Alerter l'utilisateur                     |
+| > 5 itérations stabilizer | → Alerter l'utilisateur                     |
+| Dépendance bloquée        | → Marquer blocked, passer à une autre US    |
 
 ### Modèles des agents
 
-| Catégorie | Agents | Modèle |
-|-----------|--------|--------|
-| Orchestration | forge | **Opus 4.6** (obligatoire) |
-| Planification | architect | **Sonnet 4.6** |
-| Frontend | frontend | **Sonnet 4.6** |
-| Backend | backend | **Sonnet 4.6** |
-| Machine Learning | ml-engineer | **Sonnet 4.6** |
-| Revue | reviewer | **Sonnet 4.6** |
-| Validation | stabilizer | **Sonnet 4.6** |
+| Catégorie        | Agents      | Modèle                     |
+| ---------------- | ----------- | -------------------------- |
+| Orchestration    | forge       | **Opus 4.6** (obligatoire) |
+| Planification    | architect   | **Sonnet 4.6**             |
+| Frontend         | frontend    | **Sonnet 4.6**             |
+| Backend          | backend     | **Sonnet 4.6**             |
+| Machine Learning | ml-engineer | **Sonnet 4.6**             |
+| Revue            | reviewer    | **Sonnet 4.6**             |
+| Validation       | stabilizer  | **Sonnet 4.6**             |
 
 **IMPORTANT : Tous les agents Task() DOIVENT utiliser `model: "sonnet"`. Le forge reste sur Opus 4.6.**
 

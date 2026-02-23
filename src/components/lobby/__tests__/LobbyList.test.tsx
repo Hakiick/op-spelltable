@@ -30,9 +30,7 @@ const makeRoom = (overrides: Partial<LobbyRoom> = {}): LobbyRoom => ({
 describe("LobbyList", () => {
   it("renders empty state message when no rooms", () => {
     render(<LobbyList rooms={[]} />);
-    expect(
-      screen.getByText(/Aucune partie disponible/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Aucune partie disponible/i)).toBeInTheDocument();
   });
 
   it("renders loading skeletons when loading is true", () => {

@@ -47,7 +47,10 @@ type GameAction =
   | { type: "LOSE_LIFE" }
   | { type: "RESET"; leaderLife: number };
 
-function gameReducer(state: GameLocalState, action: GameAction): GameLocalState {
+function gameReducer(
+  state: GameLocalState,
+  action: GameAction
+): GameLocalState {
   switch (action.type) {
     case "NEXT_PHASE": {
       const nextPhase = getNextPhase(state.phase);
@@ -71,7 +74,14 @@ function gameReducer(state: GameLocalState, action: GameAction): GameLocalState 
         turnNumber = turnNumber + 1;
       }
 
-      return { ...state, phase: nextPhase, donDeck, donActive, donRested, turnNumber };
+      return {
+        ...state,
+        phase: nextPhase,
+        donDeck,
+        donActive,
+        donRested,
+        turnNumber,
+      };
     }
 
     case "ACTIVATE_DON": {
@@ -160,7 +170,10 @@ export function useGameState(initialLeaderLife = 5): UseGameStateReturn {
   const activateDon = useCallback(() => dispatch({ type: "ACTIVATE_DON" }), []);
   const restDon = useCallback(() => dispatch({ type: "REST_DON" }), []);
   const unrestDon = useCallback(() => dispatch({ type: "UNREST_DON" }), []);
-  const unrestAllDon = useCallback(() => dispatch({ type: "UNREST_ALL_DON" }), []);
+  const unrestAllDon = useCallback(
+    () => dispatch({ type: "UNREST_ALL_DON" }),
+    []
+  );
   const revealLife = useCallback(
     (index: number) => dispatch({ type: "REVEAL_LIFE", index }),
     []

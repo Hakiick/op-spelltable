@@ -67,12 +67,15 @@ Fais une revue de code sur : $ARGUMENTS
 ## Revue de code : [scope]
 
 ### Problèmes critiques (à corriger)
+
 - [ ] Description → fichier:ligne
 
 ### Suggestions (nice to have)
+
 - [ ] Description → fichier:ligne
 
 ### Points positifs
+
 - Description
 ```
 

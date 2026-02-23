@@ -119,7 +119,10 @@ describe("updateUserProfile", () => {
   });
 
   it("updates and returns user with avatarUrl", async () => {
-    const updatedUser = { ...mockUser, avatarUrl: "https://example.com/avatar.png" };
+    const updatedUser = {
+      ...mockUser,
+      avatarUrl: "https://example.com/avatar.png",
+    };
     vi.mocked(prisma.user.update).mockResolvedValue(updatedUser as never);
 
     const result = await updateUserProfile("usr001", {

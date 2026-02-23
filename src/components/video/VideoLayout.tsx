@@ -19,7 +19,9 @@ export default function VideoLayout({
     <div className="flex flex-1 flex-col gap-3">
       {/* Status bar — shown at top when provided */}
       {statusBar && (
-        <div className="flex items-center justify-between px-1">{statusBar}</div>
+        <div className="flex items-center justify-between px-1">
+          {statusBar}
+        </div>
       )}
 
       {/* Video feeds: stacked on mobile, side by side on desktop */}
@@ -31,7 +33,9 @@ export default function VideoLayout({
 
         {/* Remote feed */}
         <div className="flex-1">
-          <div className="aspect-video w-full overflow-hidden">{remoteFeed}</div>
+          <div className="aspect-video w-full overflow-hidden">
+            {remoteFeed}
+          </div>
         </div>
       </div>
 

@@ -20,16 +20,8 @@ export default function PlayerArea({
   // Row 1 (Resources): Deck | Trash | Life | DON!!
   const resourceRow = (
     <div className="flex flex-wrap items-end gap-2" data-row="resources">
-      <CardZone
-        variant="deck"
-        label="Deck"
-        count={board.deck}
-      />
-      <CardZone
-        variant="trash"
-        label="Trash"
-        cards={board.trash}
-      />
+      <CardZone variant="deck" label="Deck" count={board.deck} />
+      <CardZone variant="trash" label="Trash" cards={board.trash} />
       <CardZone
         variant="life"
         label="Life"
@@ -89,7 +81,11 @@ export default function PlayerArea({
     <div
       className={`flex flex-col gap-2 ${className}`}
       data-testid={isOpponent ? "opponent-area" : "local-area"}
-      aria-label={isOpponent ? `Opponent: ${playerName ?? "Opponent"}` : `You: ${playerName ?? "Player"}`}
+      aria-label={
+        isOpponent
+          ? `Opponent: ${playerName ?? "Opponent"}`
+          : `You: ${playerName ?? "Player"}`
+      }
     >
       {/* Player name label */}
       {playerName && (
@@ -115,7 +111,9 @@ export default function PlayerArea({
           className="mt-1 text-xs text-gray-400"
           aria-label={`Hand: ${board.hand} cards`}
         >
-          Hand: <span className="font-semibold text-gray-200">{board.hand}</span> cards
+          Hand:{" "}
+          <span className="font-semibold text-gray-200">{board.hand}</span>{" "}
+          cards
         </div>
       )}
 
@@ -125,7 +123,9 @@ export default function PlayerArea({
           className="mt-1 text-xs text-gray-400"
           aria-label={`Opponent hand: ${board.hand} cards`}
         >
-          Hand: <span className="font-semibold text-gray-200">{board.hand}</span> cards
+          Hand:{" "}
+          <span className="font-semibold text-gray-200">{board.hand}</span>{" "}
+          cards
         </div>
       )}
     </div>

@@ -20,7 +20,7 @@ const singleMatch: RecognitionOutput = {
 const candidates: RecognitionResult[] = [
   { cardCode: "OP01-001", confidence: 0.85, candidateCount: 3, durationMs: 45 },
   { cardCode: "OP01-002", confidence: 0.55, candidateCount: 3, durationMs: 45 },
-  { cardCode: "OP01-003", confidence: 0.30, candidateCount: 3, durationMs: 45 },
+  { cardCode: "OP01-003", confidence: 0.3, candidateCount: 3, durationMs: 45 },
 ];
 
 describe("RecognitionPanel", () => {

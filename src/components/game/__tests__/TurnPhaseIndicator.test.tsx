@@ -36,7 +36,7 @@ describe("TurnPhaseIndicator — rendering", () => {
     expect(screen.getByText("Your turn")).toBeInTheDocument();
   });
 
-  it("shows \"Opponent's turn\" when isLocalTurn=false", () => {
+  it('shows "Opponent\'s turn" when isLocalTurn=false', () => {
     render(
       <TurnPhaseIndicator phase="main" turnNumber={2} isLocalTurn={false} />
     );

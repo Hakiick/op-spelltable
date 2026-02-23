@@ -61,11 +61,19 @@ export default async function CardsPage({ searchParams }: CardsPageProps) {
         </div>
 
         <div className="mb-6 flex flex-col gap-4">
-          <Suspense fallback={<div className="h-9 w-full animate-pulse rounded-md bg-gray-200" />}>
+          <Suspense
+            fallback={
+              <div className="h-9 w-full animate-pulse rounded-md bg-gray-200" />
+            }
+          >
             <CardSearch />
           </Suspense>
 
-          <Suspense fallback={<div className="h-11 w-full animate-pulse rounded-md bg-gray-200" />}>
+          <Suspense
+            fallback={
+              <div className="h-11 w-full animate-pulse rounded-md bg-gray-200" />
+            }
+          >
             <CardFilters sets={setOptions} />
           </Suspense>
         </div>

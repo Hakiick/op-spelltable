@@ -32,8 +32,20 @@ describe("CardGrid", () => {
   it("renders a list of cards", () => {
     const cards: CardSummary[] = [
       makeCard({ id: "1", cardId: "OP01-001", name: "Monkey D. Luffy" }),
-      makeCard({ id: "2", cardId: "OP01-002", name: "Roronoa Zoro", type: "Character", color: "Green" }),
-      makeCard({ id: "3", cardId: "OP01-003", name: "Nami", type: "Character", color: "Blue" }),
+      makeCard({
+        id: "2",
+        cardId: "OP01-002",
+        name: "Roronoa Zoro",
+        type: "Character",
+        color: "Green",
+      }),
+      makeCard({
+        id: "3",
+        cardId: "OP01-003",
+        name: "Nami",
+        type: "Character",
+        color: "Blue",
+      }),
     ];
 
     render(<CardGrid cards={cards} />);

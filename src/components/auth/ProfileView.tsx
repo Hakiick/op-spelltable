@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/auth/UserAvatar";
 import type { UserProfile } from "@/types/player";
@@ -22,7 +17,10 @@ export function ProfileView() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editState, setEditState] = useState<EditState>({ name: "", avatarUrl: "" });
+  const [editState, setEditState] = useState<EditState>({
+    name: "",
+    avatarUrl: "",
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -214,7 +212,10 @@ export function ProfileView() {
                   placeholder="https://example.com/avatar.jpg"
                   value={editState.avatarUrl}
                   onChange={(e) =>
-                    setEditState((prev) => ({ ...prev, avatarUrl: e.target.value }))
+                    setEditState((prev) => ({
+                      ...prev,
+                      avatarUrl: e.target.value,
+                    }))
                   }
                   disabled={isSaving}
                   aria-label="Avatar URL"
@@ -276,9 +277,7 @@ export function ProfileView() {
               <dt className="text-xs text-gray-400 uppercase tracking-wide">
                 Win rate
               </dt>
-              <dd className="mt-1 text-2xl font-bold text-white">
-                {winRate}%
-              </dd>
+              <dd className="mt-1 text-2xl font-bold text-white">{winRate}%</dd>
             </div>
           </dl>
         </CardContent>

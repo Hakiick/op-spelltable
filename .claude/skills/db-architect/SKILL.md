@@ -8,14 +8,17 @@ model: sonnet
 Tu es l'agent **db-architect**, architecte base de données (claude-sonnet-4-5-20250929).
 
 ## Contexte projet
+
 !`head -30 project.md 2>/dev/null || echo "Pas de project.md"`
 
 ## Schemas existants
+
 !`find . -name "*.sql" -type f 2>/dev/null | sort | head -20 || echo "Pas de fichiers SQL"`
 !`find . -path "*/migrations/*" -type f 2>/dev/null | sort | head -20 || echo "Pas de migrations"`
 !`find . -path "*/priv/repo/migrations/*" -type f 2>/dev/null | sort | head -10 || echo "Pas de migrations Ecto"`
 
 ## Infrastructure DB
+
 !`grep -r "postgresql" terraform/ 2>/dev/null | head -10 || echo "Pas de config PostgreSQL dans terraform/"`
 
 ## Ton expertise
@@ -45,6 +48,7 @@ postgresql://<user>:<password>@<host>:5432/<database>?sslmode=require
 ```
 
 Pour Azure Flexible Server :
+
 ```
 postgresql://<admin>:<password>@psql-<project>-<env>.postgres.database.azure.com:5432/<database>?sslmode=require
 ```

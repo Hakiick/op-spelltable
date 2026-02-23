@@ -1,6 +1,10 @@
 "use client";
 
-import type { RecognitionConfig, RecognitionOutput, CropRegion } from "@/types/ml";
+import type {
+  RecognitionConfig,
+  RecognitionOutput,
+  CropRegion,
+} from "@/types/ml";
 import { captureFrame } from "./capture";
 import { preprocessFrame } from "./preprocess";
 import {
@@ -32,7 +36,10 @@ interface TFModel {
 }
 
 interface TFLib {
-  loadGraphModel(url: string, options?: { fromTFHub?: boolean }): Promise<TFModel>;
+  loadGraphModel(
+    url: string,
+    options?: { fromTFHub?: boolean }
+  ): Promise<TFModel>;
   tensor(data: Float32Array, shape: number[]): unknown;
   tidy<T>(fn: () => T): T;
   dispose(tensor: unknown): void;
@@ -99,10 +106,7 @@ function createCardRecognizerImpl(): CardRecognizer {
       }
 
       // Preprocess
-      const preprocessed = preprocessFrame(
-        capture.imageData,
-        config.inputSize
-      );
+      const preprocessed = preprocessFrame(capture.imageData, config.inputSize);
 
       // Run inference with TF — dynamically imported
       const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;

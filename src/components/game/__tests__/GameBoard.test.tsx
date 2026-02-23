@@ -42,20 +42,14 @@ function makeMockBoard(overrides: Partial<PlayerBoard> = {}): PlayerBoard {
 describe("GameBoard", () => {
   it("renders the game board container", () => {
     render(
-      <GameBoard
-        localBoard={makeMockBoard()}
-        opponentBoard={makeMockBoard()}
-      />
+      <GameBoard localBoard={makeMockBoard()} opponentBoard={makeMockBoard()} />
     );
     expect(screen.getByTestId("game-board")).toBeInTheDocument();
   });
 
   it("renders both local and opponent player areas", () => {
     render(
-      <GameBoard
-        localBoard={makeMockBoard()}
-        opponentBoard={makeMockBoard()}
-      />
+      <GameBoard localBoard={makeMockBoard()} opponentBoard={makeMockBoard()} />
     );
     expect(screen.getByTestId("local-area")).toBeInTheDocument();
     expect(screen.getByTestId("opponent-area")).toBeInTheDocument();
@@ -101,7 +95,7 @@ describe("GameBoard", () => {
     expect(screen.getByText("Your turn")).toBeInTheDocument();
   });
 
-  it("shows \"Opponent's turn\" when isLocalTurn=false", () => {
+  it('shows "Opponent\'s turn" when isLocalTurn=false', () => {
     render(
       <GameBoard
         localBoard={makeMockBoard()}
@@ -127,20 +121,14 @@ describe("GameBoard", () => {
 
   it("uses default values when optional props are omitted", () => {
     render(
-      <GameBoard
-        localBoard={makeMockBoard()}
-        opponentBoard={makeMockBoard()}
-      />
+      <GameBoard localBoard={makeMockBoard()} opponentBoard={makeMockBoard()} />
     );
     expect(screen.getByText("Turn 1")).toBeInTheDocument();
   });
 
   it("renders all seven zone labels (twice — one per player)", () => {
     render(
-      <GameBoard
-        localBoard={makeMockBoard()}
-        opponentBoard={makeMockBoard()}
-      />
+      <GameBoard localBoard={makeMockBoard()} opponentBoard={makeMockBoard()} />
     );
     const leaderLabels = screen.getAllByText("Leader");
     expect(leaderLabels).toHaveLength(2);

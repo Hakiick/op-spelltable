@@ -4,13 +4,7 @@ import { ProfileView } from "@/components/auth/ProfileView";
 import type { UserProfile } from "@/types/player";
 
 vi.mock("next/image", () => ({
-  default: ({
-    src,
-    alt,
-  }: {
-    src: string;
-    alt: string;
-  }) => (
+  default: ({ src, alt }: { src: string; alt: string }) => (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt={alt} />
   ),
@@ -38,7 +32,9 @@ describe("ProfileView", () => {
     );
 
     render(<ProfileView />);
-    expect(screen.getByRole("status", { name: /loading profile/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: /loading profile/i })
+    ).toBeInTheDocument();
   });
 
   it("shows user data after fetch resolves", async () => {

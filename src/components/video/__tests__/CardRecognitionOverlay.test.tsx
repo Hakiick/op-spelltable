@@ -3,7 +3,9 @@ import { describe, it, expect, vi } from "vitest";
 import CardRecognitionOverlay from "@/components/video/CardRecognitionOverlay";
 import type { CardRecognitionState } from "@/types/ml";
 
-function makeState(overrides?: Partial<CardRecognitionState>): CardRecognitionState {
+function makeState(
+  overrides?: Partial<CardRecognitionState>
+): CardRecognitionState {
   return {
     status: "ready",
     lastResult: null,
@@ -179,7 +181,9 @@ describe("CardRecognitionOverlay", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /start card recognition/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /start card recognition/i })
+    );
     expect(onToggle).toHaveBeenCalledOnce();
   });
 

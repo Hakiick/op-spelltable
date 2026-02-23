@@ -9,7 +9,9 @@ interface RoomPageProps {
   params: Promise<{ code: string }>;
 }
 
-export async function generateMetadata({ params }: RoomPageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: RoomPageProps): Promise<Metadata> {
   const { code } = await params;
   return {
     title: `Room ${code} — OP SpellTable`,
@@ -53,8 +55,9 @@ export default async function RoomPage({ params }: RoomPageProps) {
         </div>
         <h1 className="text-2xl font-bold">Room Closed</h1>
         <p className="text-center text-gray-400">
-          Room <span className="font-mono font-semibold text-white">{code}</span> is no
-          longer active.
+          Room{" "}
+          <span className="font-mono font-semibold text-white">{code}</span> is
+          no longer active.
         </p>
         <Link
           href="/room"

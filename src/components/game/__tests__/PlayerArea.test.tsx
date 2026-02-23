@@ -50,7 +50,11 @@ describe("PlayerArea — local player", () => {
 
   it("renders player name when provided", () => {
     render(
-      <PlayerArea board={makeMockBoard()} isOpponent={false} playerName="Player One" />
+      <PlayerArea
+        board={makeMockBoard()}
+        isOpponent={false}
+        playerName="Player One"
+      />
     );
     expect(screen.getByText("You: Player One")).toBeInTheDocument();
   });
@@ -67,7 +71,9 @@ describe("PlayerArea — local player", () => {
   });
 
   it("shows hand count for local player", () => {
-    render(<PlayerArea board={makeMockBoard({ hand: 7 })} isOpponent={false} />);
+    render(
+      <PlayerArea board={makeMockBoard({ hand: 7 })} isOpponent={false} />
+    );
     expect(screen.getByLabelText("Hand: 7 cards")).toBeInTheDocument();
   });
 
@@ -97,16 +103,22 @@ describe("PlayerArea — local player", () => {
         isOpponent={false}
       />
     );
-    expect(screen.getByLabelText("DON!! Active: 6, Rested: 2")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("DON!! Active: 6, Rested: 2")
+    ).toBeInTheDocument();
   });
 
   it("renders deck count", () => {
-    render(<PlayerArea board={makeMockBoard({ deck: 35 })} isOpponent={false} />);
+    render(
+      <PlayerArea board={makeMockBoard({ deck: 35 })} isOpponent={false} />
+    );
     expect(screen.getByLabelText("Deck: 35 cards")).toBeInTheDocument();
   });
 
   it("renders life count", () => {
-    render(<PlayerArea board={makeMockBoard({ life: 4 })} isOpponent={false} />);
+    render(
+      <PlayerArea board={makeMockBoard({ life: 4 })} isOpponent={false} />
+    );
     expect(screen.getByLabelText("Life: 4 cards")).toBeInTheDocument();
   });
 });
@@ -119,7 +131,11 @@ describe("PlayerArea — opponent", () => {
 
   it("renders opponent name when provided", () => {
     render(
-      <PlayerArea board={makeMockBoard()} isOpponent={true} playerName="Rival" />
+      <PlayerArea
+        board={makeMockBoard()}
+        isOpponent={true}
+        playerName="Rival"
+      />
     );
     expect(screen.getByText("Opponent: Rival")).toBeInTheDocument();
   });

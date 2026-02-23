@@ -19,6 +19,7 @@ bash scripts/stability-check.sh
 ```
 
 Ce script exécute dans l'ordre :
+
 1. `npm run build` — Build Next.js production
 2. `npx tsc --noEmit` — Type-check complet
 3. `npm run lint` — ESLint
@@ -34,19 +35,19 @@ Ce script exécute dans l'ordre :
 
 ## Workflow par agent
 
-| Agent | Check après son travail |
-|-------|------------------------|
-| backend | `npx tsc --noEmit && npm test` |
-| frontend | `npm run build && npm run lint` |
-| ml-engineer | `npx tsc --noEmit && npm test` |
-| stabilizer | `bash scripts/stability-check.sh` (complet) |
+| Agent       | Check après son travail                     |
+| ----------- | ------------------------------------------- |
+| backend     | `npx tsc --noEmit && npm test`              |
+| frontend    | `npm run build && npm run lint`             |
+| ml-engineer | `npx tsc --noEmit && npm test`              |
+| stabilizer  | `bash scripts/stability-check.sh` (complet) |
 
 ## Résolution des erreurs
 
-| Type d'erreur | Responsable | Action |
-|--------------|-------------|--------|
-| Type errors | Dev concerné | Corriger les types |
-| Build errors | Dev concerné | Corriger le code |
-| Lint errors | Stabilizer | Corriger directement (auto-fixable) |
-| Test failures | Dev concerné | Corriger le test ou le code |
-| Lint non-fixable | Dev concerné | Corriger manuellement |
+| Type d'erreur    | Responsable  | Action                              |
+| ---------------- | ------------ | ----------------------------------- |
+| Type errors      | Dev concerné | Corriger les types                  |
+| Build errors     | Dev concerné | Corriger le code                    |
+| Lint errors      | Stabilizer   | Corriger directement (auto-fixable) |
+| Test failures    | Dev concerné | Corriger le test ou le code         |
+| Lint non-fixable | Dev concerné | Corriger manuellement               |

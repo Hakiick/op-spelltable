@@ -58,7 +58,11 @@ export interface WorkerBridge {
   recognize(
     imageData: ImageData,
     config: RecognitionConfig
-  ): Promise<{ result: RecognitionOutput; fps: number; detectedCards: DetectedCard[] }>;
+  ): Promise<{
+    result: RecognitionOutput;
+    fps: number;
+    detectedCards: DetectedCard[];
+  }>;
   dispose(): void;
   isUsingWorker(): boolean;
 }
@@ -98,10 +102,9 @@ export function createDefaultWorkerFactory(): WorkerFactory {
   return (): Worker | null => {
     if (typeof Worker === "undefined") return null;
     try {
-      return new Worker(
-        new URL("./recognition.worker.ts", import.meta.url),
-        { type: "module" }
-      );
+      return new Worker(new URL("./recognition.worker.ts", import.meta.url), {
+        type: "module",
+      });
     } catch {
       return null;
     }
@@ -218,7 +221,11 @@ export function createWorkerBridge(
   async function recognize(
     imageData: ImageData,
     config: RecognitionConfig
-  ): Promise<{ result: RecognitionOutput; fps: number; detectedCards: DetectedCard[] }> {
+  ): Promise<{
+    result: RecognitionOutput;
+    fps: number;
+    detectedCards: DetectedCard[];
+  }> {
     if (usingWorker && worker) {
       const w = worker;
       // Clone the ImageData before sending to worker to avoid detached buffer issues
@@ -228,44 +235,50 @@ export function createWorkerBridge(
         imageData.height
       );
 
-      return new Promise<{ result: RecognitionOutput; fps: number; detectedCards: DetectedCard[] }>(
-        (resolve, reject) => {
-          const handleMessage = (event: MessageEvent<WorkerResponse>): void => {
-            clearTimeout(timeout);
-            w.removeEventListener("message", handleMessage);
-            w.removeEventListener("error", onError);
-            if (event.data.type === "result") {
-              // Worker path doesn't support detection yet — return empty
-              resolve({ result: event.data.data, fps: event.data.fps, detectedCards: [] });
-            } else if (event.data.type === "error") {
-              reject(new Error(event.data.message));
-            }
-          };
+      return new Promise<{
+        result: RecognitionOutput;
+        fps: number;
+        detectedCards: DetectedCard[];
+      }>((resolve, reject) => {
+        const handleMessage = (event: MessageEvent<WorkerResponse>): void => {
+          clearTimeout(timeout);
+          w.removeEventListener("message", handleMessage);
+          w.removeEventListener("error", onError);
+          if (event.data.type === "result") {
+            // Worker path doesn't support detection yet — return empty
+            resolve({
+              result: event.data.data,
+              fps: event.data.fps,
+              detectedCards: [],
+            });
+          } else if (event.data.type === "error") {
+            reject(new Error(event.data.message));
+          }
+        };
 
-          const onError = (e: ErrorEvent): void => {
-            clearTimeout(timeout);
-            w.removeEventListener("message", handleMessage);
-            w.removeEventListener("error", onError);
-            reject(new Error(e.message ?? "Worker error during recognition"));
-          };
+        const onError = (e: ErrorEvent): void => {
+          clearTimeout(timeout);
+          w.removeEventListener("message", handleMessage);
+          w.removeEventListener("error", onError);
+          reject(new Error(e.message ?? "Worker error during recognition"));
+        };
 
-          const timeout = setTimeout(() => {
-            w.removeEventListener("message", handleMessage);
-            w.removeEventListener("error", onError);
-            reject(new Error("Worker recognition timeout"));
-          }, 5000);
+        const timeout = setTimeout(() => {
+          w.removeEventListener("message", handleMessage);
+          w.removeEventListener("error", onError);
+          reject(new Error("Worker recognition timeout"));
+        }, 5000);
 
-          w.addEventListener("message", handleMessage);
-          w.addEventListener("error", onError);
+        w.addEventListener("message", handleMessage);
+        w.addEventListener("error", onError);
 
-          const msg: WorkerMessage = {
-            type: "recognize",
-            imageData: cloned,
-            config,
-          };
-          w.postMessage(msg);
-        }
-      );
+        const msg: WorkerMessage = {
+          type: "recognize",
+          imageData: cloned,
+          config,
+        };
+        w.postMessage(msg);
+      });
     }
 
     // Main-thread fallback: detect cards first, then recognize each crop
@@ -296,9 +309,7 @@ export function createWorkerBridge(
       let sorted: DetectedCard[] = [];
 
       if (detectedCards.length > 0) {
-        sorted = [...detectedCards].sort(
-          (a, b) => b.confidence - a.confidence
-        );
+        sorted = [...detectedCards].sort((a, b) => b.confidence - a.confidence);
         const bestDetection = sorted[0];
         const [bx, by, bw, bh] = bestDetection.bbox;
         recognitionInput = cropFromImageData(

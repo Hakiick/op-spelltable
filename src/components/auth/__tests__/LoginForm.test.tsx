@@ -29,7 +29,9 @@ describe("LoginForm", () => {
 
   it("renders submit button", () => {
     render(<LoginForm />);
-    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /sign in/i })
+    ).toBeInTheDocument();
   });
 
   it("shows link to register page", () => {

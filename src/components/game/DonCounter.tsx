@@ -66,9 +66,7 @@ export default function DonCounter({
         <span className="text-xs font-bold uppercase tracking-widest text-red-400">
           DON!!
         </span>
-        <span className="text-[10px] text-gray-500">
-          {total}/10
-        </span>
+        <span className="text-[10px] text-gray-500">{total}/10</span>
       </div>
 
       {/* Active DON!! */}

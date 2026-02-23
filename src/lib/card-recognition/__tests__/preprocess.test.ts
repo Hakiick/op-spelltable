@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { preprocessFrame, normalizePixel, rgbaToNormalizedRgb } from "../preprocess";
+import {
+  preprocessFrame,
+  normalizePixel,
+  rgbaToNormalizedRgb,
+} from "../preprocess";
 
 // Mock ImageData since jsdom doesn't provide it natively
 class MockImageData {
@@ -75,7 +79,7 @@ describe("rgbaToNormalizedRgb", () => {
 
     expect(result[0]).toBeCloseTo(normalizePixel(200), 5); // R
     expect(result[1]).toBeCloseTo(normalizePixel(100), 5); // G
-    expect(result[2]).toBeCloseTo(normalizePixel(50), 5);  // B
+    expect(result[2]).toBeCloseTo(normalizePixel(50), 5); // B
     expect(result.length).toBe(3); // no alpha
   });
 
@@ -113,10 +117,18 @@ describe("preprocessFrame", () => {
     inputSize: number,
     pixelValue: number = 128
   ): void {
-    const data = new Uint8ClampedArray(inputSize * inputSize * 4).fill(pixelValue);
+    const data = new Uint8ClampedArray(inputSize * inputSize * 4).fill(
+      pixelValue
+    );
     for (let i = 3; i < data.length; i += 4) data[i] = 255;
-    const mockImageData = new MockImageData(data, inputSize, inputSize) as unknown as ImageData;
-    (mockCtx.getImageData as ReturnType<typeof vi.fn>).mockReturnValue(mockImageData);
+    const mockImageData = new MockImageData(
+      data,
+      inputSize,
+      inputSize
+    ) as unknown as ImageData;
+    (mockCtx.getImageData as ReturnType<typeof vi.fn>).mockReturnValue(
+      mockImageData
+    );
   }
 
   beforeEach(() => {
@@ -200,7 +212,12 @@ describe("preprocessFrame", () => {
     const imageData = new MockImageData(100, 100) as unknown as ImageData;
     preprocessFrame(imageData, inputSize);
 
-    expect(mockCtx.getImageData).toHaveBeenCalledWith(0, 0, inputSize, inputSize);
+    expect(mockCtx.getImageData).toHaveBeenCalledWith(
+      0,
+      0,
+      inputSize,
+      inputSize
+    );
   });
 
   it("produces normalized values in range [-1, ~1]", () => {
@@ -212,8 +229,14 @@ describe("preprocessFrame", () => {
       data[i * 4 + 2] = (i * 71) % 256;
       data[i * 4 + 3] = 255;
     }
-    const mockImageData = new MockImageData(data, inputSize, inputSize) as unknown as ImageData;
-    (mockCtx.getImageData as ReturnType<typeof vi.fn>).mockReturnValue(mockImageData);
+    const mockImageData = new MockImageData(
+      data,
+      inputSize,
+      inputSize
+    ) as unknown as ImageData;
+    (mockCtx.getImageData as ReturnType<typeof vi.fn>).mockReturnValue(
+      mockImageData
+    );
 
     const imageData = new MockImageData(100, 100) as unknown as ImageData;
     const result = preprocessFrame(imageData, inputSize);

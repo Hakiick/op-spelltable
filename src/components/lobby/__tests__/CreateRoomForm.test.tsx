@@ -48,9 +48,7 @@ describe("CreateRoomForm", () => {
     );
 
     render(<CreateRoomForm />);
-    await user.click(
-      screen.getByRole("button", { name: /Créer une partie/i })
-    );
+    await user.click(screen.getByRole("button", { name: /Créer une partie/i }));
 
     // Wait for async navigation
     await vi.waitFor(() => {
@@ -69,9 +67,7 @@ describe("CreateRoomForm", () => {
     );
 
     render(<CreateRoomForm />);
-    await user.click(
-      screen.getByRole("button", { name: /Créer une partie/i })
-    );
+    await user.click(screen.getByRole("button", { name: /Créer une partie/i }));
 
     await vi.waitFor(() => {
       expect(screen.getByRole("alert")).toBeInTheDocument();
@@ -81,10 +77,7 @@ describe("CreateRoomForm", () => {
   it("disables button while loading", async () => {
     const user = userEvent.setup();
     // Never resolves fetch to keep loading state
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockReturnValue(new Promise(() => {}))
-    );
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
 
     render(<CreateRoomForm />);
     const button = screen.getByRole("button", { name: /Créer une partie/i });
@@ -104,10 +97,11 @@ describe("CreateRoomForm", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<CreateRoomForm />);
-    await user.type(screen.getByPlaceholderText("Nom de la partie"), "Ma Partie");
-    await user.click(
-      screen.getByRole("button", { name: /Créer une partie/i })
+    await user.type(
+      screen.getByPlaceholderText("Nom de la partie"),
+      "Ma Partie"
     );
+    await user.click(screen.getByRole("button", { name: /Créer une partie/i }));
 
     await vi.waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(

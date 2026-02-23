@@ -44,9 +44,7 @@ describe("CardDetailOverlay", () => {
     // Never resolves, so loading stays true
     vi.mocked(fetch).mockReturnValueOnce(new Promise(() => {}));
 
-    render(
-      <CardDetailOverlay cardCode="OP01-001" onClose={vi.fn()} />
-    );
+    render(<CardDetailOverlay cardCode="OP01-001" onClose={vi.fn()} />);
 
     expect(screen.getByLabelText("Loading card details")).toBeInTheDocument();
   });
@@ -57,9 +55,7 @@ describe("CardDetailOverlay", () => {
       new Response(JSON.stringify({ data: card }), { status: 200 })
     );
 
-    render(
-      <CardDetailOverlay cardCode="OP01-001" onClose={vi.fn()} />
-    );
+    render(<CardDetailOverlay cardCode="OP01-001" onClose={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText("Monkey D. Luffy")).toBeInTheDocument();
@@ -80,9 +76,7 @@ describe("CardDetailOverlay", () => {
       new Response(JSON.stringify({ data: card }), { status: 200 })
     );
 
-    render(
-      <CardDetailOverlay cardCode="OP01-001" onClose={vi.fn()} />
-    );
+    render(<CardDetailOverlay cardCode="OP01-001" onClose={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText("Monkey D. Luffy")).toBeInTheDocument();
@@ -106,9 +100,7 @@ describe("CardDetailOverlay", () => {
       new Response(JSON.stringify({ data: card }), { status: 200 })
     );
 
-    render(
-      <CardDetailOverlay cardCode="OP01-001" onClose={vi.fn()} />
-    );
+    render(<CardDetailOverlay cardCode="OP01-001" onClose={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText("Monkey D. Luffy")).toBeInTheDocument();
@@ -123,9 +115,7 @@ describe("CardDetailOverlay", () => {
       new Response(JSON.stringify({ error: "Card not found" }), { status: 404 })
     );
 
-    render(
-      <CardDetailOverlay cardCode="BAD-001" onClose={vi.fn()} />
-    );
+    render(<CardDetailOverlay cardCode="BAD-001" onClose={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText("Card not found.")).toBeInTheDocument();
@@ -176,7 +166,9 @@ describe("CardDetailOverlay", () => {
     const onClose = vi.fn();
     render(<CardDetailOverlay cardCode="OP01-001" onClose={onClose} />);
 
-    const closeButton = screen.getByRole("button", { name: "Close card detail" });
+    const closeButton = screen.getByRole("button", {
+      name: "Close card detail",
+    });
     fireEvent.click(closeButton);
 
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -185,9 +177,7 @@ describe("CardDetailOverlay", () => {
   it("has correct aria attributes", () => {
     vi.mocked(fetch).mockReturnValueOnce(new Promise(() => {}));
 
-    render(
-      <CardDetailOverlay cardCode="OP01-001" onClose={vi.fn()} />
-    );
+    render(<CardDetailOverlay cardCode="OP01-001" onClose={vi.fn()} />);
 
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");

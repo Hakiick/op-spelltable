@@ -24,7 +24,7 @@ const constraints: MediaStreamConstraints = {
   video: {
     width: { ideal: 1280 },
     height: { ideal: 720 },
-    facingMode: 'environment', // caméra arrière pour filmer la table
+    facingMode: "environment", // caméra arrière pour filmer la table
   },
   audio: true,
 };

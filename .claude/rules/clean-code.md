@@ -44,16 +44,16 @@ paths:
 
 ## Naming
 
-| Élément | Convention | Exemple |
-|---------|-----------|---------|
-| Composant | PascalCase | `GameBoard`, `CardZone` |
-| Hook | camelCase + `use` | `useGameState`, `useWebRTC` |
-| Fonction | camelCase | `formatCardId`, `calculateDamage` |
-| Constante | SCREAMING_SNAKE | `MAX_DON_COUNT`, `TURN_PHASES` |
-| Type/Interface | PascalCase | `CardType`, `GameState` |
-| Fichier composant | PascalCase | `GameBoard.tsx` |
-| Fichier util | camelCase | `formatCardId.ts` |
-| API route | kebab-case | `api/game-sessions/route.ts` |
+| Élément           | Convention        | Exemple                           |
+| ----------------- | ----------------- | --------------------------------- |
+| Composant         | PascalCase        | `GameBoard`, `CardZone`           |
+| Hook              | camelCase + `use` | `useGameState`, `useWebRTC`       |
+| Fonction          | camelCase         | `formatCardId`, `calculateDamage` |
+| Constante         | SCREAMING_SNAKE   | `MAX_DON_COUNT`, `TURN_PHASES`    |
+| Type/Interface    | PascalCase        | `CardType`, `GameState`           |
+| Fichier composant | PascalCase        | `GameBoard.tsx`                   |
+| Fichier util      | camelCase         | `formatCardId.ts`                 |
+| API route         | kebab-case        | `api/game-sessions/route.ts`      |
 
 ## Interdits
 

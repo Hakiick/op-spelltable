@@ -152,7 +152,9 @@ export function Navbar() {
                     avatarUrl={session.user.image ?? null}
                     size="sm"
                   />
-                  <span className="text-sm text-gray-200">{session.user.name}</span>
+                  <span className="text-sm text-gray-200">
+                    {session.user.name}
+                  </span>
                 </div>
                 <Link
                   href="/profile"

@@ -8,7 +8,9 @@ interface CardGridWithOverlayProps {
   cards: CardSummary[];
 }
 
-export default function CardGridWithOverlay({ cards }: CardGridWithOverlayProps) {
+export default function CardGridWithOverlay({
+  cards,
+}: CardGridWithOverlayProps) {
   const [selectedCardCode, setSelectedCardCode] = useState<string | null>(null);
 
   if (cards.length === 0) {

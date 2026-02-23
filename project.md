@@ -12,15 +12,15 @@ Application web permettant de jouer au **One Piece Trading Card Game** (TCG) à 
 
 ## Stack technique
 
-| Composant | Technologie |
-|-----------|-------------|
-| Framework | Next.js 14+ (App Router) avec TypeScript |
-| Visio/Webcam | WebRTC (via PeerJS ou LiveKit) — peer-to-peer |
+| Composant                | Technologie                                                        |
+| ------------------------ | ------------------------------------------------------------------ |
+| Framework                | Next.js 14+ (App Router) avec TypeScript                           |
+| Visio/Webcam             | WebRTC (via PeerJS ou LiveKit) — peer-to-peer                      |
 | Reconnaissance de cartes | TensorFlow.js (côté client) ou API Python séparée (OpenCV/PyTorch) |
-| Base de données | SQLite + Prisma (dev) / PostgreSQL (prod) |
-| Temps réel | WebSockets (Socket.io) |
-| Styling | Tailwind CSS + shadcn/ui |
-| Hébergement cible | Vercel (front) + Railway/Fly.io (services backend) |
+| Base de données          | SQLite + Prisma (dev) / PostgreSQL (prod)                          |
+| Temps réel               | WebSockets (Socket.io)                                             |
+| Styling                  | Tailwind CSS + shadcn/ui                                           |
+| Hébergement cible        | Vercel (front) + Railway/Fly.io (services backend)                 |
 
 ---
 
@@ -28,16 +28,16 @@ Application web permettant de jouer au **One Piece Trading Card Game** (TCG) à 
 
 ### Zones de jeu (par joueur)
 
-| Zone | Description |
-|------|-------------|
-| Leader | 1 carte Leader face visible (personnage principal) |
-| Character Area | Jusqu'à 5 cartes personnage |
-| Stage Area | 1 carte stage maximum |
-| DON!! Deck | Pile de 10 cartes DON!! (ressources) |
-| Cost Area (DON!! Area) | Cartes DON!! actives/utilisées |
-| Life Area | Cartes vie face cachée (nombre initial = vie du Leader) |
-| Trash | Défausse |
-| Main Deck | Pile de 50 cartes |
+| Zone                   | Description                                             |
+| ---------------------- | ------------------------------------------------------- |
+| Leader                 | 1 carte Leader face visible (personnage principal)      |
+| Character Area         | Jusqu'à 5 cartes personnage                             |
+| Stage Area             | 1 carte stage maximum                                   |
+| DON!! Deck             | Pile de 10 cartes DON!! (ressources)                    |
+| Cost Area (DON!! Area) | Cartes DON!! actives/utilisées                          |
+| Life Area              | Cartes vie face cachée (nombre initial = vie du Leader) |
+| Trash                  | Défausse                                                |
+| Main Deck              | Pile de 50 cartes                                       |
 
 ### Déroulement d'un tour
 

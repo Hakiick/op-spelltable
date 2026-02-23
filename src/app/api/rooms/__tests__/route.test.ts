@@ -11,7 +11,12 @@ vi.mock("@/lib/auth", () => ({
   auth: vi.fn().mockResolvedValue(null),
 }));
 
-import { createRoom, getRoomByCode, getRoomById, updateRoom } from "@/lib/database/rooms";
+import {
+  createRoom,
+  getRoomByCode,
+  getRoomById,
+  updateRoom,
+} from "@/lib/database/rooms";
 import { POST as createRoomHandler } from "@/app/api/rooms/route";
 import {
   GET as getRoomHandler,
@@ -72,7 +77,11 @@ describe("POST /api/rooms", () => {
     const request = new Request("http://localhost:3000/api/rooms", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ hostPeerId: "peer-host-1", name: "My Battle", isPublic: true }),
+      body: JSON.stringify({
+        hostPeerId: "peer-host-1",
+        name: "My Battle",
+        isPublic: true,
+      }),
     });
 
     const response = await createRoomHandler(request as never);
@@ -168,7 +177,11 @@ describe("GET /api/rooms/[code]", () => {
 
 describe("PATCH /api/rooms/[code]", () => {
   it("updates the room and returns 200 with updated data", async () => {
-    const updatedRoom = { ...mockRoom, guestPeerId: "peer-guest-1", status: "ready" };
+    const updatedRoom = {
+      ...mockRoom,
+      guestPeerId: "peer-guest-1",
+      status: "ready",
+    };
     vi.mocked(getRoomByCode).mockResolvedValue(mockRoom);
     vi.mocked(updateRoom).mockResolvedValue(updatedRoom);
 

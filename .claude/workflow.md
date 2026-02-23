@@ -22,15 +22,15 @@
 
 ## Modèles des agents
 
-| Phase | Agent | Modèle |
-|-------|-------|--------|
-| Orchestration | forge | **Opus 4.6** |
-| Planification | architect | **Sonnet 4.6** |
-| Frontend | frontend | **Sonnet 4.6** |
-| Backend | backend | **Sonnet 4.6** |
+| Phase            | Agent       | Modèle         |
+| ---------------- | ----------- | -------------- |
+| Orchestration    | forge       | **Opus 4.6**   |
+| Planification    | architect   | **Sonnet 4.6** |
+| Frontend         | frontend    | **Sonnet 4.6** |
+| Backend          | backend     | **Sonnet 4.6** |
 | Machine Learning | ml-engineer | **Sonnet 4.6** |
-| Revue | reviewer | **Sonnet 4.6** |
-| Stabilisation | stabilizer | **Sonnet 4.6** |
+| Revue            | reviewer    | **Sonnet 4.6** |
+| Stabilisation    | stabilizer  | **Sonnet 4.6** |
 
 ## Stratégie Git : Rebase Only
 
@@ -73,23 +73,28 @@ gh issue edit <numero> --add-label "in-progress" --remove-label "task"
 Chaque agent intervient dans l'ordre :
 
 **architect (si assigné) → model: sonnet :**
+
 - Analyse l'US, propose un plan d'architecture
 
 **backend → model: sonnet :**
+
 - Implémente les API routes, schemas Prisma, signaling
 - Commits atomiques
 - Rebase régulier sur main
 
 **frontend → model: sonnet :**
+
 - Crée les composants React/Next.js
 - Design responsive mobile-first
 - Intégration WebRTC UI
 
 **ml-engineer (si assigné) → model: sonnet :**
+
 - Pipeline de reconnaissance de cartes
 - Intégration avec le flux webcam
 
 **reviewer (si assigné) → model: sonnet :**
+
 - Revue du code produit
 - Le dev corrige si nécessaire
 

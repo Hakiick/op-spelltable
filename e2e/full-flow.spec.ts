@@ -14,7 +14,9 @@ test.describe("Full E2E Flow — Landing → Register → Lobby → Room → Gam
 
     // 2. Navigate to register
     await page.goto("/auth/register");
-    await expect(page.locator("[data-slot='card-title']")).toContainText("Create account");
+    await expect(page.locator("[data-slot='card-title']")).toContainText(
+      "Create account"
+    );
 
     // 3. Fill registration form
     await page.locator("#name").fill(user.name);
@@ -64,10 +66,15 @@ test.describe("Full E2E Flow — Landing → Register → Lobby → Room → Gam
     await expect(page.locator("text=cards found")).toBeVisible();
 
     // 5. Click a card to open overlay
-    const cardButton = page.locator("button").filter({ hasText: /Luffy/i }).first();
+    const cardButton = page
+      .locator("button")
+      .filter({ hasText: /Luffy/i })
+      .first();
     if ((await cardButton.count()) > 0) {
       await cardButton.click();
-      await expect(page.locator("[role='dialog']")).toBeVisible({ timeout: 5000 });
+      await expect(page.locator("[role='dialog']")).toBeVisible({
+        timeout: 5000,
+      });
 
       // 6. Verify overlay content
       const dialog = page.locator("[role='dialog']");
@@ -85,7 +92,10 @@ test.describe("Full E2E Flow — Landing → Register → Lobby → Room → Gam
     await expect(page.locator("text=cards found")).toBeVisible();
   });
 
-  test("lobby create and verify public visibility", async ({ page, request }) => {
+  test("lobby create and verify public visibility", async ({
+    page,
+    request,
+  }) => {
     const roomName = `Visible ${Date.now()}`;
 
     // 1. Create a public room via API
@@ -101,6 +111,8 @@ test.describe("Full E2E Flow — Landing → Register → Lobby → Room → Gam
     await page.waitForTimeout(3000);
 
     // 4. The room should be in the public list
-    await expect(page.locator(`text=${roomName}`)).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(`text=${roomName}`)).toBeVisible({
+      timeout: 10000,
+    });
   });
 });

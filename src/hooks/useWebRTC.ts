@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Peer as PeerType, MediaConnection, DataConnection } from "peerjs";
 import { createPeer } from "@/lib/webrtc/peer-client";
-import type { ConnectionStatus, WebRTCActions, WebRTCState } from "@/types/webrtc";
+import type {
+  ConnectionStatus,
+  WebRTCActions,
+  WebRTCState,
+} from "@/types/webrtc";
 
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS = 3000;
@@ -72,7 +76,11 @@ export function useWebRTC(roomCode: string): {
 
       call.on("close", () => {
         if (!isMountedRef.current) return;
-        setState((prev) => ({ ...prev, remoteStream: null, status: "disconnected" }));
+        setState((prev) => ({
+          ...prev,
+          remoteStream: null,
+          status: "disconnected",
+        }));
       });
 
       call.on("error", (err: Error) => {
@@ -143,7 +151,10 @@ export function useWebRTC(roomCode: string): {
               }));
             }
           } catch (err) {
-            const msg = err instanceof Error ? err.message : "Failed to register with room";
+            const msg =
+              err instanceof Error
+                ? err.message
+                : "Failed to register with room";
             setError(msg);
           }
         });
@@ -193,7 +204,8 @@ export function useWebRTC(roomCode: string): {
         });
       } catch (err) {
         if (!isMountedRef.current) return;
-        const msg = err instanceof Error ? err.message : "Failed to initialize peer";
+        const msg =
+          err instanceof Error ? err.message : "Failed to initialize peer";
         setError(msg);
       }
     }
@@ -245,7 +257,11 @@ export function useWebRTC(roomCode: string): {
     const remotePeerId = remotePeerIdRef.current;
     if (!peerRef.current || !remotePeerId) return;
 
-    setState((prev) => ({ ...prev, localStream: stream, status: "connecting" }));
+    setState((prev) => ({
+      ...prev,
+      localStream: stream,
+      status: "connecting",
+    }));
 
     const mediaCall = peerRef.current.call(remotePeerId, stream);
     activeCallRef.current = mediaCall;
@@ -257,7 +273,11 @@ export function useWebRTC(roomCode: string): {
 
     mediaCall.on("close", () => {
       if (!isMountedRef.current) return;
-      setState((prev) => ({ ...prev, remoteStream: null, status: "disconnected" }));
+      setState((prev) => ({
+        ...prev,
+        remoteStream: null,
+        status: "disconnected",
+      }));
     });
 
     mediaCall.on("error", (err: Error) => {

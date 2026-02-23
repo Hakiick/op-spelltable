@@ -5,9 +5,15 @@ test.describe("US-11 — Lobby & Matchmaking", () => {
     test("lobby page loads with all sections", async ({ page }) => {
       await page.goto("/lobby");
       await expect(page.locator("h1")).toContainText("Lobby");
-      await expect(page.getByRole("heading", { name: /créer une partie/i })).toBeVisible();
-      await expect(page.getByRole("heading", { name: /rejoindre une partie/i })).toBeVisible();
-      await expect(page.getByRole("heading", { name: /parties publiques/i })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: /créer une partie/i })
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: /rejoindre une partie/i })
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: /parties publiques/i })
+      ).toBeVisible();
     });
 
     test("refresh button is present", async ({ page }) => {
@@ -19,7 +25,9 @@ test.describe("US-11 — Lobby & Matchmaking", () => {
   });
 
   test.describe("Create Room Form", () => {
-    test("create room form has name input and public toggle", async ({ page }) => {
+    test("create room form has name input and public toggle", async ({
+      page,
+    }) => {
       await page.goto("/lobby");
       await expect(page.getByLabel(/nom de la partie/i)).toBeVisible();
       await expect(page.getByLabel(/partie publique/i)).toBeVisible();
@@ -49,21 +57,29 @@ test.describe("US-11 — Lobby & Matchmaking", () => {
 
     test("join button is disabled when code is empty", async ({ page }) => {
       await page.goto("/lobby");
-      const joinBtn = page.getByRole("button", { name: "Rejoindre", exact: true });
+      const joinBtn = page.getByRole("button", {
+        name: "Rejoindre",
+        exact: true,
+      });
       await expect(joinBtn).toBeDisabled();
     });
 
     test("entering a code enables join button", async ({ page }) => {
       await page.goto("/lobby");
       await page.getByLabel(/code de la partie/i).fill("ABC123");
-      const joinBtn = page.getByRole("button", { name: "Rejoindre", exact: true });
+      const joinBtn = page.getByRole("button", {
+        name: "Rejoindre",
+        exact: true,
+      });
       await expect(joinBtn).toBeEnabled();
     });
 
     test("joining navigates to room page", async ({ page }) => {
       await page.goto("/lobby");
       await page.getByLabel(/code de la partie/i).fill("TESTCD");
-      await page.getByRole("button", { name: "Rejoindre", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Rejoindre", exact: true })
+        .click();
       await page.waitForURL(/\/room\/TESTCD/i, { timeout: 5000 });
     });
 
@@ -165,7 +181,10 @@ test.describe("US-11 — Lobby & Matchmaking", () => {
   });
 
   test.describe("Public rooms display", () => {
-    test("public rooms show in lobby UI after creation", async ({ page, request }) => {
+    test("public rooms show in lobby UI after creation", async ({
+      page,
+      request,
+    }) => {
       const roomName = `UI Room ${Date.now()}`;
       await request.post("/api/rooms", {
         data: { name: roomName, isPublic: true },
@@ -175,7 +194,9 @@ test.describe("US-11 — Lobby & Matchmaking", () => {
       // Wait for the lobby to fetch and display rooms
       await page.waitForTimeout(2000);
       // The room should appear in the list
-      await expect(page.locator(`text=${roomName}`)).toBeVisible({ timeout: 10000 });
+      await expect(page.locator(`text=${roomName}`)).toBeVisible({
+        timeout: 10000,
+      });
     });
   });
 });

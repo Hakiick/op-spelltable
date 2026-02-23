@@ -9,7 +9,9 @@ interface GamePageProps {
   params: Promise<{ id: string }>;
 }
 
-export async function generateMetadata(_props: GamePageProps): Promise<Metadata> {
+export async function generateMetadata(
+  _props: GamePageProps
+): Promise<Metadata> {
   return {
     title: "Game — OP SpellTable",
     description: "One Piece TCG remote play game session.",
@@ -37,7 +39,11 @@ function makeMockLeader(cardId: string, name: string): CardData {
 }
 
 /** Creates a mock character card for demonstration purposes */
-function makeMockCharacter(cardId: string, name: string, cost: number): CardData {
+function makeMockCharacter(
+  cardId: string,
+  name: string,
+  cost: number
+): CardData {
   return {
     id: `mock-${cardId}`,
     cardId,

@@ -51,7 +51,10 @@ export default function CardFilters({ sets }: CardFiltersProps) {
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex w-full flex-col gap-1 sm:w-auto">
-        <label htmlFor="filter-color" className="text-xs font-medium text-gray-600">
+        <label
+          htmlFor="filter-color"
+          className="text-xs font-medium text-gray-600"
+        >
           Color
         </label>
         <select
@@ -71,7 +74,10 @@ export default function CardFilters({ sets }: CardFiltersProps) {
       </div>
 
       <div className="flex w-full flex-col gap-1 sm:w-auto">
-        <label htmlFor="filter-type" className="text-xs font-medium text-gray-600">
+        <label
+          htmlFor="filter-type"
+          className="text-xs font-medium text-gray-600"
+        >
           Type
         </label>
         <select
@@ -91,7 +97,10 @@ export default function CardFilters({ sets }: CardFiltersProps) {
       </div>
 
       <div className="flex w-full flex-col gap-1 sm:w-auto">
-        <label htmlFor="filter-set" className="text-xs font-medium text-gray-600">
+        <label
+          htmlFor="filter-set"
+          className="text-xs font-medium text-gray-600"
+        >
           Set
         </label>
         <select
@@ -111,7 +120,10 @@ export default function CardFilters({ sets }: CardFiltersProps) {
       </div>
 
       <div className="flex w-full flex-col gap-1 sm:w-auto">
-        <label htmlFor="filter-cost" className="text-xs font-medium text-gray-600">
+        <label
+          htmlFor="filter-cost"
+          className="text-xs font-medium text-gray-600"
+        >
           Cost
         </label>
         <select
@@ -131,7 +143,10 @@ export default function CardFilters({ sets }: CardFiltersProps) {
       </div>
 
       <div className="flex w-full flex-col gap-1 sm:w-auto">
-        <label htmlFor="filter-rarity" className="text-xs font-medium text-gray-600">
+        <label
+          htmlFor="filter-rarity"
+          className="text-xs font-medium text-gray-600"
+        >
           Rarity
         </label>
         <select

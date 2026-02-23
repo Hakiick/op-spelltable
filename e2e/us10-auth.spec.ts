@@ -10,11 +10,19 @@ test.describe("US-10 — Auth & Profils", () => {
   test.describe("Registration", () => {
     test("register page loads with form", async ({ page }) => {
       await page.goto("/auth/register");
-      await expect(page.locator("[data-slot='card-title']")).toContainText("Create account");
-      await expect(page.getByRole("textbox", { name: /display name/i })).toBeVisible();
+      await expect(page.locator("[data-slot='card-title']")).toContainText(
+        "Create account"
+      );
+      await expect(
+        page.getByRole("textbox", { name: /display name/i })
+      ).toBeVisible();
       await expect(page.getByRole("textbox", { name: /email/i })).toBeVisible();
-      await expect(page.getByRole("textbox", { name: /^password$/i })).toBeVisible();
-      await expect(page.getByRole("textbox", { name: /confirm password/i })).toBeVisible();
+      await expect(
+        page.getByRole("textbox", { name: /^password$/i })
+      ).toBeVisible();
+      await expect(
+        page.getByRole("textbox", { name: /confirm password/i })
+      ).toBeVisible();
     });
 
     test("shows validation errors for empty form", async ({ page }) => {
@@ -55,7 +63,9 @@ test.describe("US-10 — Auth & Profils", () => {
       await expect(page.locator("text=valid email")).toBeVisible();
     });
 
-    test("successful registration creates account and redirects", async ({ page }) => {
+    test("successful registration creates account and redirects", async ({
+      page,
+    }) => {
       await page.goto("/auth/register");
       await page.locator("#name").fill(TEST_USER.name);
       await page.locator("#email").fill(TEST_USER.email);
@@ -78,9 +88,13 @@ test.describe("US-10 — Auth & Profils", () => {
   test.describe("Login", () => {
     test("login page loads with form", async ({ page }) => {
       await page.goto("/auth/login");
-      await expect(page.locator("[data-slot='card-title']")).toContainText("Sign in");
+      await expect(page.locator("[data-slot='card-title']")).toContainText(
+        "Sign in"
+      );
       await expect(page.getByRole("textbox", { name: /email/i })).toBeVisible();
-      await expect(page.getByRole("textbox", { name: /password/i })).toBeVisible();
+      await expect(
+        page.getByRole("textbox", { name: /password/i })
+      ).toBeVisible();
     });
 
     test("shows error for wrong credentials", async ({ page }) => {
@@ -88,7 +102,9 @@ test.describe("US-10 — Auth & Profils", () => {
       await page.locator("#email").fill("nonexistent@test.com");
       await page.locator("#password").fill("WrongPassword123");
       await page.getByRole("button", { name: /sign in/i }).click();
-      await expect(page.locator("text=Invalid email or password")).toBeVisible({ timeout: 5000 });
+      await expect(page.locator("text=Invalid email or password")).toBeVisible({
+        timeout: 5000,
+      });
     });
 
     test("login page has link to register", async ({ page }) => {
@@ -112,7 +128,9 @@ test.describe("US-10 — Auth & Profils", () => {
       expect(json.id).toBeTruthy();
     });
 
-    test("POST /api/auth/register rejects duplicate email", async ({ request }) => {
+    test("POST /api/auth/register rejects duplicate email", async ({
+      request,
+    }) => {
       const email = `dup-${Date.now()}@test.com`;
       // First registration
       await request.post("/api/auth/register", {
@@ -125,14 +143,18 @@ test.describe("US-10 — Auth & Profils", () => {
       expect(res.status()).toBe(409);
     });
 
-    test("POST /api/auth/register rejects short password", async ({ request }) => {
+    test("POST /api/auth/register rejects short password", async ({
+      request,
+    }) => {
       const res = await request.post("/api/auth/register", {
         data: { name: "Test", email: "short@test.com", password: "123" },
       });
       expect(res.status()).toBe(400);
     });
 
-    test("POST /api/auth/register rejects missing name", async ({ request }) => {
+    test("POST /api/auth/register rejects missing name", async ({
+      request,
+    }) => {
       const res = await request.post("/api/auth/register", {
         data: { email: "noname@test.com", password: "Password123!" },
       });

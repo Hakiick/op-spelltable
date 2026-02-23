@@ -5,9 +5,7 @@ import DonCounter from "@/components/game/DonCounter";
 
 describe("DonCounter — rendering", () => {
   it("renders the DON!! label", () => {
-    render(
-      <DonCounter active={3} rested={2} deckRemaining={5} />
-    );
+    render(<DonCounter active={3} rested={2} deckRemaining={5} />);
     expect(screen.getByTestId("don-counter")).toBeInTheDocument();
   });
 
@@ -124,9 +122,7 @@ describe("DonCounter — interactions", () => {
         onActivate={() => undefined}
       />
     );
-    expect(
-      screen.getByLabelText("Activate DON!! from deck")
-    ).toBeDisabled();
+    expect(screen.getByLabelText("Activate DON!! from deck")).toBeDisabled();
   });
 
   it("disables Rest button when active DON!! is 0", () => {

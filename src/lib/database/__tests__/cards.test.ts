@@ -158,9 +158,7 @@ describe("getCardByCode", () => {
 
 describe("getSets", () => {
   it("returns the list of sets", async () => {
-    vi.mocked(prisma.cardSet.findMany).mockResolvedValue(
-      [mockSetRow] as never
-    );
+    vi.mocked(prisma.cardSet.findMany).mockResolvedValue([mockSetRow] as never);
 
     const result = await getSets();
 

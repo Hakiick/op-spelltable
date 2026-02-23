@@ -9,7 +9,10 @@ interface CardPaginationProps {
   totalPages: number;
 }
 
-export default function CardPagination({ page, totalPages }: CardPaginationProps) {
+export default function CardPagination({
+  page,
+  totalPages,
+}: CardPaginationProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 

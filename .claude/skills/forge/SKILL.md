@@ -40,6 +40,7 @@ Lis `project.md` pour comprendre le contexte global du projet.
 - `/stabilizer` — Vérifie build + tests + lint + type-check
 
 ## Équipe et règles du projet
+
 @.claude/team.md
 
 ---
@@ -57,6 +58,7 @@ bash scripts/check-us-eligibility.sh <numero>
 **YOU MUST NOT** continuer si le script retourne exit 1.
 
 Lis le body complet de l'issue :
+
 ```bash
 gh issue view <numero> --json number,title,body,labels --jq '.'
 ```
@@ -79,18 +81,21 @@ Tu analyses la US **toi-même** avant de déléguer. C'est ton rôle de Team Lea
 Ces agents ont été auto-générés par `/init-project` et sont spécialisés pour ce projet.
 
 **Si l'issue ne spécifie pas d'équipe** → détermine les agents nécessaires :
+
 1. Lis les agents disponibles (listés dans la section "Agents disponibles" ci-dessus)
 2. Sélectionne les agents pertinents pour le scope de l'US
 3. Ajoute toujours `stabilizer` en dernier, `reviewer` si US critique
 
 **Ordre d'exécution** :
+
 - Les agents de type "architect" / "db-architect" → en premier (planification)
-- Les agents de type "*-dev" → ensuite (implémentation)
-- Les agents de type "*-tester" → après l'implémentation
+- Les agents de type "\*-dev" → ensuite (implémentation)
+- Les agents de type "\*-tester" → après l'implémentation
 - `reviewer` → après les tests
 - `stabilizer` → toujours en dernier
 
 **Modèles pour les subagents :**
+
 - **Tous les agents** → **model: "sonnet"**
 
 #### Créer les agents dans la session tmux (OBLIGATOIRE)
@@ -100,6 +105,7 @@ Ces agents ont été auto-générés par `/init-project` et sont spécialisés p
 **YOU MUST NOT** écrire dans `.forge/status/` ou `.forge/tasks/` sans avoir d'abord exécuté `forge-add-agents.sh`.
 
 Le script `forge-add-agents.sh` fait TOUT automatiquement :
+
 - Crée les windows tmux pour chaque agent
 - Lance les `agent-watcher.sh` dans chaque window
 - Initialise les fichiers `.forge/status/<agent>` à "idle"
@@ -122,11 +128,13 @@ bash scripts/forge-add-agents.sh --list
 **Le forge décide** quels agents créer en fonction de l'US. Il n'y a pas de liste fixe.
 
 **Si un agent supplémentaire est nécessaire** en cours de pipeline :
+
 ```bash
 bash scripts/forge-add-agents.sh pwa-dev
 ```
 
 **En fin de pipeline**, le forge retire les agents terminés :
+
 ```bash
 # Retirer un agent spécifique (pendant le pipeline)
 bash scripts/forge-add-agents.sh --remove architect
@@ -138,11 +146,13 @@ bash scripts/forge-add-agents.sh --cleanup
 ### 1.3 Décomposer en sous-tâches
 
 Crée un plan de sous-tâches avec **TodoWrite**. Chaque sous-tâche doit être :
+
 - Concrète et vérifiable
 - Assignée à un agent précis (utilise les vrais noms d'agents du projet)
 - Ordonnée logiquement
 
 Exemple de décomposition (adapte les agents aux vrais agents du projet) :
+
 ```
 1. [architect] Concevoir l'architecture responsive
 2. [mobile-dev] Implémenter les composants mobile-first
@@ -216,6 +226,7 @@ Le mode est décidé UNE FOIS en début de Phase 3 et reste le même pour toute 
 ### Mode Team Agents — Exécution via Task() subagents
 
 Quand le mode Team Agents est actif, le forge :
+
 - Écrit les tâches dans `.forge/` (pour le monitoring tmux)
 - Exécute le travail via `Task()` subagents dans sa propre session
 - Met à jour les statuts et résultats dans `.forge/` (pour la visibilité tmux)
@@ -260,6 +271,7 @@ Utilise `Task()` avec le contenu de la tâche comme prompt. Le subagent exécute
 dans la session courante du forge (pas de session Claude séparée).
 
 Le prompt du Task() doit inclure :
+
 - Le contenu complet de `.forge/tasks/<agent-name>.md`
 - L'identité de l'agent : "Tu es l'agent '<agent-name>'"
 - Les règles du projet
@@ -268,6 +280,7 @@ Le prompt du Task() doit inclure :
 **Étape 3 — Écrire le résultat et mettre à jour le statut** :
 
 Après le retour du Task() :
+
 - Écrire le résultat dans `.forge/results/<agent-name>.md`
 - Mettre le statut à "done" ou "error" selon le résultat
 
@@ -296,6 +309,7 @@ Puis lancer les deux Task() dans le même message. Quand chacun termine,
 #### Feedback loop (Team Agents)
 
 Si le résultat d'un agent n'est pas satisfaisant :
+
 1. Réécrire `.forge/tasks/<agent-name>.md` avec le feedback et les corrections demandées
 2. Remettre le statut à "working" : `echo "working" > .forge/status/<agent-name>`
 3. Relancer un Task() subagent avec le feedback
@@ -312,10 +326,11 @@ Utilise le skill de planification pour obtenir un plan.
 **Output attendu** : plan structuré avec fichiers, sous-tâches, risques
 
 **Évaluation Team Lead** :
+
 - Le plan couvre-t-il tous les critères d'acceptance ? Si non → demande des précisions
 - Les risques sont-ils identifiés ? Si critique → alerter l'utilisateur
 
-### 3.2 — Agents de développement (*-dev, mobile-dev, pwa-dev, etc.)
+### 3.2 — Agents de développement (\*-dev, mobile-dev, pwa-dev, etc.)
 
 Exécute chaque agent dev **dans l'ordre** de la décomposition.
 Chaque agent travaille dans son domaine d'expertise.
@@ -326,23 +341,27 @@ git fetch origin main && git rebase origin/main
 ```
 
 **Évaluation Team Lead après chaque agent dev** :
+
 ```bash
 # Quick check : est-ce que ça compile ?
 npx tsc --noEmit 2>&1 | tail -20
 ```
+
 - Si erreurs de compilation → **renvoyer à l'agent dev** avec les erreurs
 - Ne PAS passer aux tests si le code ne compile pas
 
-### 3.3 — Agents de test (*-tester, responsive-tester...)
+### 3.3 — Agents de test (\*-tester, responsive-tester...)
 
 Chaque agent de test travaille dans son scope.
 
 **Évaluation Team Lead après les tests** :
+
 ```bash
 npm test 2>&1 | tail -30
 ```
 
 **Feedback loop si tests échouent** :
+
 1. Identifie si c'est un bug dans le code ou dans le test
 2. Si bug dans le code → **renvoie à l'agent dev concerné** avec le détail
 3. L'agent dev corrige → **re-lance le tester**
@@ -357,10 +376,12 @@ Le reviewer lit les règles du projet (`.claude/rules/`) et vérifie leur respec
 **Évaluation Team Lead après le reviewer** :
 
 Le reviewer produit un rapport avec :
+
 - **Problèmes critiques** (à corriger obligatoirement)
 - **Suggestions** (nice to have)
 
 **Feedback loop si problèmes critiques** :
+
 1. Envoie les problèmes critiques **à l'agent dev concerné** pour correction
 2. L'agent corrige → re-lance les **tests** (regression check)
 3. Optionnel : re-lance le **reviewer** sur les fichiers modifiés
@@ -373,6 +394,7 @@ bash scripts/stability-check.sh
 ```
 
 **Feedback loop si instable** :
+
 1. Identifie quelle étape échoue (build / tests / lint / type-check)
 2. Corrige directement (le stabilizer peut corriger les problèmes simples)
 3. Si le problème est complexe → **renvoie au developer**
@@ -459,18 +481,18 @@ Utilise `/compact` avec ce résumé pour nettoyer le contexte.
 
 ## Gestion des erreurs (Team Lead decisions)
 
-| Situation | Décision du Team Lead |
-|-----------|----------------------|
-| Compilation échoue après developer | → Renvoyer au developer avec les erreurs |
-| Tests échouent (bug code) | → Developer corrige → Tester re-vérifie |
-| Tests échouent (test mal écrit) | → Tester corrige le test |
-| Review critique | → Developer corrige → Tester re-vérifie → Reviewer re-check |
-| Stabilizer échoue (lint) | → Stabilizer corrige directement |
-| Stabilizer échoue (type error) | → Developer corrige → Stabilizer re-check |
-| Rebase avec conflits | → Résoudre les conflits → Stabilizer re-check tout |
-| > 3 itérations dev/test | → Alerter l'utilisateur, proposer des options |
-| > 5 itérations stabilizer | → Alerter l'utilisateur, possible design issue |
-| Dépendance bloquée | → Marquer blocked, passer à une autre US |
+| Situation                          | Décision du Team Lead                                       |
+| ---------------------------------- | ----------------------------------------------------------- |
+| Compilation échoue après developer | → Renvoyer au developer avec les erreurs                    |
+| Tests échouent (bug code)          | → Developer corrige → Tester re-vérifie                     |
+| Tests échouent (test mal écrit)    | → Tester corrige le test                                    |
+| Review critique                    | → Developer corrige → Tester re-vérifie → Reviewer re-check |
+| Stabilizer échoue (lint)           | → Stabilizer corrige directement                            |
+| Stabilizer échoue (type error)     | → Developer corrige → Stabilizer re-check                   |
+| Rebase avec conflits               | → Résoudre les conflits → Stabilizer re-check tout          |
+| > 3 itérations dev/test            | → Alerter l'utilisateur, proposer des options               |
+| > 5 itérations stabilizer          | → Alerter l'utilisateur, possible design issue              |
+| Dépendance bloquée                 | → Marquer blocked, passer à une autre US                    |
 
 ## Limites de sécurité
 

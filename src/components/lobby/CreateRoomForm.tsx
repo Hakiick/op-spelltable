@@ -44,7 +44,10 @@ export default function CreateRoomForm() {
   };
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
+    <form
+      onSubmit={(e) => void handleSubmit(e)}
+      className="flex flex-col gap-4"
+    >
       <h2 className="text-lg font-semibold text-white">Créer une partie</h2>
 
       <div className="flex flex-col gap-2">
@@ -69,7 +72,9 @@ export default function CreateRoomForm() {
           aria-label="Partie publique"
           disabled={loading}
         />
-        <span className="text-sm text-gray-300">Partie publique (visible dans le lobby)</span>
+        <span className="text-sm text-gray-300">
+          Partie publique (visible dans le lobby)
+        </span>
       </label>
 
       {error && (

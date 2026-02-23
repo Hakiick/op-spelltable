@@ -78,7 +78,11 @@ export function RegisterForm() {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+        }),
       });
 
       if (!response.ok) {
@@ -100,7 +104,10 @@ export function RegisterForm() {
       if (result?.ok) {
         window.location.href = "/";
       } else {
-        setErrors({ general: "Account created, but sign-in failed. Please log in manually." });
+        setErrors({
+          general:
+            "Account created, but sign-in failed. Please log in manually.",
+        });
       }
     } catch {
       setErrors({ general: "An unexpected error occurred. Please try again." });
@@ -119,12 +126,13 @@ export function RegisterForm() {
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="name"
-              className="text-sm font-medium text-gray-200"
-            >
+            <label htmlFor="name" className="text-sm font-medium text-gray-200">
               Name
             </label>
             <Input
@@ -195,7 +203,11 @@ export function RegisterForm() {
               disabled={isLoading}
             />
             {errors.password && (
-              <p id="password-error" role="alert" className="text-xs text-red-400">
+              <p
+                id="password-error"
+                role="alert"
+                className="text-xs text-red-400"
+              >
                 {errors.password}
               </p>
             )}
@@ -217,12 +229,18 @@ export function RegisterForm() {
               required
               autoComplete="new-password"
               aria-label="Confirm password"
-              aria-describedby={errors.confirmPassword ? "confirm-error" : undefined}
+              aria-describedby={
+                errors.confirmPassword ? "confirm-error" : undefined
+              }
               className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 min-h-11"
               disabled={isLoading}
             />
             {errors.confirmPassword && (
-              <p id="confirm-error" role="alert" className="text-xs text-red-400">
+              <p
+                id="confirm-error"
+                role="alert"
+                className="text-xs text-red-400"
+              >
                 {errors.confirmPassword}
               </p>
             )}
