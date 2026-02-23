@@ -18,7 +18,7 @@ import type {
 } from "@/types/ml";
 
 const DEFAULT_CONFIG: RecognitionConfig = {
-  confidenceThreshold: 0.75,
+  confidenceThreshold: 0.0,
   inputSize: 224,
   maxCandidates: 3,
   frameSkip: 5,

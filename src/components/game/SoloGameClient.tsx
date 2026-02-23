@@ -86,13 +86,14 @@ export default function SoloGameClient({
         </Button>
       </header>
 
-      {/* Hidden video element for card recognition (needs direct ref) */}
+      {/* Hidden video element for card recognition — positioned offscreen
+          but with real dimensions so the browser decodes frames properly */}
       <video
         ref={videoRef}
         autoPlay
         muted
         playsInline
-        className="absolute h-0 w-0 overflow-hidden"
+        className="pointer-events-none fixed -left-[9999px] -top-[9999px] h-[1px] w-[1px] opacity-0"
         aria-hidden="true"
       />
 
