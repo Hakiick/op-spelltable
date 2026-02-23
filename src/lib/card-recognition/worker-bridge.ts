@@ -18,8 +18,31 @@ import {
   detectCards,
   disposeDetectionModel,
 } from "./detection";
+import { recognizeCardCode, disposeOcrWorker } from "./ocr";
+import { computeHistogram } from "./histogram";
+import { detectBorderColor } from "./color-filter";
 
 const FPS_WINDOW_SIZE = 10;
+
+/**
+ * Flips an ImageData horizontally (mirror).
+ * Used to handle webcam streams that are mirrored relative to reference card images.
+ */
+function flipImageDataHorizontally(source: ImageData): ImageData {
+  const { width, height, data } = source;
+  const flipped = new ImageData(width, height);
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const srcIdx = (row * width + col) * 4;
+      const dstIdx = (row * width + (width - 1 - col)) * 4;
+      flipped.data[dstIdx] = data[srcIdx];
+      flipped.data[dstIdx + 1] = data[srcIdx + 1];
+      flipped.data[dstIdx + 2] = data[srcIdx + 2];
+      flipped.data[dstIdx + 3] = data[srcIdx + 3];
+    }
+  }
+  return flipped;
+}
 
 /**
  * Crops a rectangular region from an ImageData object.
@@ -316,47 +339,103 @@ export function createWorkerBridge(
         const bestDetection = sorted[0];
         const [bx, by, bw, bh] = bestDetection.bbox;
 
-        // Add 10% padding around the bbox to ensure the full card is captured
-        const padX = bw * 0.1;
-        const padY = bh * 0.1;
+        // Shrink the bbox by 10% on each edge to counteract the tendency of
+        // YOLOv8 detections to be significantly larger than the actual card.
+        // This removes background that dilutes the card features.
+        const shrinkX = bw * 0.1;
+        const shrinkY = bh * 0.1;
         recognitionInput = cropFromImageData(
           imageData,
-          Math.round(bx - padX),
-          Math.round(by - padY),
-          Math.round(bw + padX * 2),
-          Math.round(bh + padY * 2)
+          Math.round(bx + shrinkX),
+          Math.round(by + shrinkY),
+          Math.round(bw - shrinkX * 2),
+          Math.round(bh - shrinkY * 2)
         );
       } else {
         // No detection model or no cards found — process full frame
         recognitionInput = imageData;
       }
 
-      // Step 3: Preprocess and run MobileNetV3 on the selected input
-      const preprocessed = preprocessFrame(recognitionInput, config.inputSize);
+      // OCR-based card code detection is available (see ./ocr.ts) but
+      // disabled in the hot loop — webcam resolution is typically too low
+      // for reliable reading of the small card code text. We keep the module
+      // for potential future use with higher-resolution captures.
+
+      // Step 2b: Detect border color for pre-filtering the reference database
+      const detectedColor = detectBorderColor(recognitionInput);
+
+      console.log(
+        `[Recognition] Crop: ${recognitionInput.width}x${recognitionInput.height} (from ${imageData.width}x${imageData.height}), color=${detectedColor ?? "unknown"}`
+      );
+
+      // Debug: log crop dimensions + detection info
+      if (sorted.length > 0) {
+        const [, , bw, bh] = sorted[0].bbox;
+        console.log(
+          `[Detection] Best bbox: ${Math.round(bw)}x${Math.round(bh)} conf=${(sorted[0].confidence * 100).toFixed(0)}%`
+        );
+      }
+
+      // Step 3: Preprocess and run MobileNetV3 on BOTH orientations
+      // (normal + horizontally flipped) to handle mirrored webcam streams.
       const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
+      const flippedInput = flipImageDataHorizontally(recognitionInput);
 
-      const outputTensor = tf.tidy(() => {
-        const inputTensor = tf.tensor(preprocessed, [
-          1,
-          config.inputSize,
-          config.inputSize,
-          3,
-        ]);
-        return (fallbackModel as TFModel).predict(inputTensor) as {
-          data(): Promise<Float32Array>;
-          dispose(): void;
-        };
-      });
+      const preprocessedNormal = preprocessFrame(
+        recognitionInput,
+        config.inputSize
+      );
+      const preprocessedFlipped = preprocessFrame(
+        flippedInput,
+        config.inputSize
+      );
 
-      const embedding = await outputTensor.data();
-      outputTensor.dispose();
+      const [embNormal, embFlipped] = await Promise.all(
+        [preprocessedNormal, preprocessedFlipped].map(async (pp) => {
+          const out = tf.tidy(() => {
+            const inp = tf.tensor(pp, [
+              1,
+              config.inputSize,
+              config.inputSize,
+              3,
+            ]);
+            return (fallbackModel as TFModel).predict(inp) as {
+              data(): Promise<Float32Array>;
+              dispose(): void;
+            };
+          });
+          const data = await out.data();
+          out.dispose();
+          return data;
+        })
+      );
 
-      const candidates = findTopCandidates(
-        embedding,
+      // Compute color histograms for hybrid matching (robust to SAMPLE watermark)
+      const histNormal = computeHistogram(recognitionInput);
+      const histFlipped = computeHistogram(flippedInput);
+
+      const candidatesNormal = findTopCandidates(
+        embNormal,
         fallbackDb,
         config.maxCandidates,
-        config.confidenceThreshold
+        config.confidenceThreshold,
+        histNormal,
+        detectedColor
       );
+      const candidatesFlipped = findTopCandidates(
+        embFlipped,
+        fallbackDb,
+        config.maxCandidates,
+        config.confidenceThreshold,
+        histFlipped,
+        detectedColor
+      );
+
+      // Pick the orientation that produced the highest-confidence match
+      const bestNormal = candidatesNormal[0]?.confidence ?? 0;
+      const bestFlipped = candidatesFlipped[0]?.confidence ?? 0;
+      const candidates =
+        bestFlipped > bestNormal ? candidatesFlipped : candidatesNormal;
 
       const durationMs = Date.now() - start;
       const fps = recordCompletion();
@@ -383,7 +462,14 @@ export function createWorkerBridge(
           candidateCount: candidates.length,
           durationMs,
         },
-        topCandidates: candidates.map((c) => ({ ...c, durationMs })),
+        topCandidates: candidates.map((c, i) => {
+          if (i < 5) {
+            console.log(
+              `[Match] #${i + 1}: ${c.cardCode} (${(c.confidence * 100).toFixed(1)}%)`
+            );
+          }
+          return { ...c, durationMs };
+        }),
         fps,
         detectedCards: sorted,
       };
@@ -415,6 +501,7 @@ export function createWorkerBridge(
       fallbackModel = null;
     }
     disposeDetectionModel();
+    void disposeOcrWorker();
     fallbackDb = null;
     fallbackReady = false;
     usingWorker = false;

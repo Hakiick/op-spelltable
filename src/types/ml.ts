@@ -17,11 +17,15 @@ export type RecognitionOutput = RecognitionResult | RecognitionNoMatch;
 export interface EmbeddingEntry {
   cardCode: string;
   embedding: number[];
+  histogram?: number[];
+  color?: string;
 }
 
 export interface ReferenceEmbedding {
   cardCode: string;
   embedding: Float32Array;
+  histogram?: Float32Array;
+  color?: string;
 }
 
 export interface EmbeddingDatabase {

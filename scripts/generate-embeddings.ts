@@ -22,11 +22,14 @@ interface CardEntry {
   cardId: string;
   name: string;
   imageUrl: string | null;
+  color?: string;
 }
 
 interface EmbeddingEntry {
   cardCode: string;
   embedding: number[];
+  histogram?: number[];
+  color?: string;
 }
 
 interface EmbeddingDatabase {
@@ -57,7 +60,7 @@ const MODEL_URL =
 const INPUT_SIZE = 224;
 
 /** Number of augmented versions to generate per card for a robust centroid embedding. */
-const AUGMENT_COUNT = 5;
+const AUGMENT_COUNT = 6;
 const DATA_DIR = path.resolve("src/data/cards");
 const OUTPUT_DIR = path.resolve("public/ml");
 
@@ -120,6 +123,7 @@ type SharpInstance = {
   rotate: (angle: number, opts?: { background: { r: number; g: number; b: number; alpha: number } }) => SharpInstance;
   modulate: (opts: { brightness?: number; saturation?: number }) => SharpInstance;
   blur: (sigma?: number) => SharpInstance;
+  flop: () => SharpInstance;
   raw: () => { toBuffer: () => Promise<Buffer> };
 };
 type SharpFn = (input: Buffer) => SharpInstance;
@@ -143,13 +147,20 @@ async function generateAugmentedInputs(
     (s) => s.modulate({ brightness: 1.3 }),
     // 4: Darker + slight blur (simulates distance/defocus)
     (s) => s.modulate({ brightness: 0.7 }).blur(1.5),
+    // 5: Horizontal flip (handles mirrored webcam streams)
+    (s) => s.flop(),
   ];
 
   const results: Float32Array[] = [];
 
   for (const augment of augmentations.slice(0, AUGMENT_COUNT)) {
     const pipeline = augment(sharpFn(imageBuffer));
+    // Boost saturation before resize to reduce the impact of the gray
+    // SAMPLE watermark on the embedding. The SAMPLE text is desaturated
+    // (gray/white) while card art is colorful, so higher saturation
+    // makes the art features more dominant in the embedding.
     const resizedBuffer = await pipeline
+      .modulate({ saturation: 1.5 })
       .resize(INPUT_SIZE, INPUT_SIZE, {
         fit: "contain",
         background: { r: 128, g: 128, b: 128 },
@@ -187,6 +198,64 @@ function averageEmbeddings(embeddings: Float32Array[]): number[] {
     result[i] = avg[i] / embeddings.length;
   }
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Color histogram (HSV) — computed from raw RGB buffer
+// ---------------------------------------------------------------------------
+
+const HIST_H_BINS = 16;
+const HIST_S_BINS = 8;
+const HIST_V_BINS = 8;
+
+function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  let h = 0;
+  const s = max === 0 ? 0 : d / max;
+  const v = max;
+  if (d > 0) {
+    if (max === r) h = 60 * (((g - b) / d) % 6);
+    else if (max === g) h = 60 * ((b - r) / d + 2);
+    else h = 60 * ((r - g) / d + 4);
+    if (h < 0) h += 360;
+  }
+  return [h, s, v];
+}
+
+/** Compute normalized HSV histogram from raw RGB buffer (3 bytes per pixel). */
+function computeImageHistogram(
+  rgbBuffer: Buffer,
+  size: number
+): Float32Array {
+  const totalBins = HIST_H_BINS * HIST_S_BINS * HIST_V_BINS;
+  const histogram = new Float32Array(totalBins);
+  const pixelCount = size * size;
+  let counted = 0;
+
+  for (let i = 0; i < pixelCount; i++) {
+    const r = rgbBuffer[i * 3];
+    const g = rgbBuffer[i * 3 + 1];
+    const b = rgbBuffer[i * 3 + 2];
+
+    const [h, s, v] = rgbToHsv(r, g, b);
+    // Skip dark pixels (background) and desaturated bright pixels (SAMPLE text)
+    if (v < 0.1 || (s < 0.1 && v > 0.6)) continue;
+
+    const hBin = Math.min(Math.floor((h / 360) * HIST_H_BINS), HIST_H_BINS - 1);
+    const sBin = Math.min(Math.floor(s * HIST_S_BINS), HIST_S_BINS - 1);
+    const vBin = Math.min(Math.floor(v * HIST_V_BINS), HIST_V_BINS - 1);
+
+    histogram[hBin * HIST_S_BINS * HIST_V_BINS + sBin * HIST_V_BINS + vBin]++;
+    counted++;
+  }
+
+  if (counted > 0) {
+    for (let i = 0; i < totalBins; i++) histogram[i] /= counted;
+  }
+  return histogram;
 }
 
 async function generateRealDatabase(
@@ -240,6 +309,17 @@ async function generateRealDatabase(
       // Download image
       const imageBuffer = await downloadImage(card.imageUrl);
 
+      // Compute color histogram from the original image (HSV, skip SAMPLE-like pixels)
+      const histogramBuffer = await sharpFn(imageBuffer)
+        .resize(INPUT_SIZE, INPUT_SIZE, {
+          fit: "contain",
+          background: { r: 128, g: 128, b: 128 },
+        })
+        .removeAlpha()
+        .raw()
+        .toBuffer();
+      const histogram = computeImageHistogram(histogramBuffer, INPUT_SIZE);
+
       // Generate augmented versions and compute embeddings for each
       const augmentedInputs = await generateAugmentedInputs(imageBuffer, sharpFn);
       const augmentedEmbeddings: Float32Array[] = [];
@@ -262,6 +342,8 @@ async function generateRealDatabase(
       entries.push({
         cardCode: card.cardId,
         embedding: averageEmbeddings(augmentedEmbeddings),
+        histogram: Array.from(histogram),
+        color: card.color,
       });
 
       process.stdout.write("OK\n");
