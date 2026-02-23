@@ -5,6 +5,7 @@ import CreateRoomForm from "@/components/lobby/CreateRoomForm";
 import JoinRoomForm from "@/components/lobby/JoinRoomForm";
 import LobbyList from "@/components/lobby/LobbyList";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function LobbyPage() {
   const { rooms, loading, error, refetch } = useLobby();
@@ -25,6 +26,17 @@ export default function LobbyPage() {
             Actualiser
           </Button>
         </div>
+
+        {/* Solo test mode link */}
+        <Link
+          href="/game/solo"
+          className="mb-4 flex items-center gap-2 rounded-lg border border-blue-800 bg-blue-950 px-4 py-3 text-sm text-blue-300 transition-colors hover:bg-blue-900 min-h-[44px]"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+          </svg>
+          Solo Test Mode — Test camera, board &amp; card recognition without opponent
+        </Link>
 
         {/* Create + Join forms — side by side on md+, stacked on mobile */}
         <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
