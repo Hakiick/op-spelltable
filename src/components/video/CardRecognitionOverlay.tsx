@@ -11,6 +11,8 @@ interface CardRecognitionOverlayProps {
   videoWidth?: number;
   /** Height of the video source in pixels (for scaling bounding boxes) */
   videoHeight?: number;
+  /** Whether the video feed is mirrored — flips bbox x-coordinates */
+  mirror?: boolean;
   className?: string;
 }
 
@@ -45,19 +47,18 @@ export default function CardRecognitionOverlay({
   onToggle,
   videoWidth,
   videoHeight,
+  mirror = false,
   className = "",
 }: CardRecognitionOverlayProps) {
-  const { status, lastResult, detectedCards, error, loadingProgress, fps } = state;
+  const { status, lastResult, detectedCards, error, loadingProgress, fps } =
+    state;
 
   const isLoading = status === "loading";
   const isError = status === "error";
-  const hasCard =
-    lastResult !== null && lastResult.cardCode !== null;
+  const hasCard = lastResult !== null && lastResult.cardCode !== null;
 
   const confidencePercent =
-    lastResult !== null
-      ? Math.round(lastResult.confidence * 100)
-      : 0;
+    lastResult !== null ? Math.round(lastResult.confidence * 100) : 0;
 
   return (
     <div
@@ -89,7 +90,9 @@ export default function CardRecognitionOverlay({
         <button
           onClick={onToggle}
           className="pointer-events-auto flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg bg-black/60 px-3 py-2 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white/50 active:scale-95"
-          aria-label={isActive ? "Stop card recognition" : "Start card recognition"}
+          aria-label={
+            isActive ? "Stop card recognition" : "Start card recognition"
+          }
           aria-pressed={isActive}
         >
           {/* Scan/Search icon */}
@@ -133,7 +136,10 @@ export default function CardRecognitionOverlay({
           aria-label="Loading ML model"
         >
           <div className="rounded-xl bg-black/70 px-6 py-4 backdrop-blur-sm flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-600 border-t-blue-400" aria-hidden="true" />
+            <div
+              className="h-8 w-8 animate-spin rounded-full border-4 border-gray-600 border-t-blue-400"
+              aria-hidden="true"
+            />
             <p className="text-sm text-white">Loading ML model...</p>
             {loadingProgress > 0 && (
               <div className="w-40">
@@ -144,7 +150,9 @@ export default function CardRecognitionOverlay({
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-700">
                   <div
                     className="h-full rounded-full bg-blue-400 transition-all duration-300"
-                    style={{ width: `${Math.min(100, Math.round(loadingProgress))}%` }}
+                    style={{
+                      width: `${Math.min(100, Math.round(loadingProgress))}%`,
+                    }}
                     aria-hidden="true"
                   />
                 </div>
@@ -176,7 +184,12 @@ export default function CardRecognitionOverlay({
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
               />
             </svg>
-            <p id="recognition-error-desc" className="max-w-xs text-center text-sm text-red-300">{error}</p>
+            <p
+              id="recognition-error-desc"
+              className="max-w-xs text-center text-sm text-red-300"
+            >
+              {error}
+            </p>
             <button
               onClick={onToggle}
               className="rounded-lg bg-red-900/60 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-900/80 focus:outline-none focus:ring-2 focus:ring-red-400 min-h-11"
@@ -190,42 +203,49 @@ export default function CardRecognitionOverlay({
       )}
 
       {/* Bounding boxes for detected cards */}
-      {isActive && detectedCards && detectedCards.length > 0 && videoWidth && videoHeight && (
-        <>
-          {detectedCards.map((card: DetectedCard, idx: number) => {
-            const [bx, by, bw, bh] = card.bbox;
-            // Convert pixel coordinates to percentages relative to video dimensions
-            const left = (bx / videoWidth) * 100;
-            const top = (by / videoHeight) * 100;
-            const width = (bw / videoWidth) * 100;
-            const height = (bh / videoHeight) * 100;
-            const pct = Math.round(card.confidence * 100);
+      {isActive &&
+        detectedCards &&
+        detectedCards.length > 0 &&
+        videoWidth &&
+        videoHeight && (
+          <>
+            {detectedCards.map((card: DetectedCard, idx: number) => {
+              const [bx, by, bw, bh] = card.bbox;
+              // Convert pixel coordinates to percentages relative to video dimensions.
+              // When the video is mirrored (CSS scaleX(-1)), flip the x-coordinate
+              // so the bbox aligns with the visually mirrored card position.
+              const rawLeft = (bx / videoWidth) * 100;
+              const width = (bw / videoWidth) * 100;
+              const left = mirror ? 100 - rawLeft - width : rawLeft;
+              const top = (by / videoHeight) * 100;
+              const height = (bh / videoHeight) * 100;
+              const pct = Math.round(card.confidence * 100);
 
-            return (
-              <div
-                key={idx}
-                className={`absolute border-2 ${getBboxBorderColor(card.confidence)} rounded pointer-events-none`}
-                style={{
-                  left: `${left}%`,
-                  top: `${top}%`,
-                  width: `${width}%`,
-                  height: `${height}%`,
-                }}
-                aria-hidden="true"
-              >
-                {/* Label with card code (if matched) + detection confidence */}
-                <span
-                  className={`absolute -top-5 left-0 rounded px-1 py-0.5 text-[10px] font-mono text-white whitespace-nowrap ${getBboxLabelBg(card.confidence)}`}
+              return (
+                <div
+                  key={idx}
+                  className={`absolute border-2 ${getBboxBorderColor(card.confidence)} rounded pointer-events-none`}
+                  style={{
+                    left: `${left}%`,
+                    top: `${top}%`,
+                    width: `${width}%`,
+                    height: `${height}%`,
+                  }}
+                  aria-hidden="true"
                 >
-                  {idx === 0 && lastResult?.cardCode
-                    ? `${lastResult.cardCode} (${pct}%)`
-                    : `Card ${idx + 1} (${pct}%)`}
-                </span>
-              </div>
-            );
-          })}
-        </>
-      )}
+                  {/* Label with card code (if matched) + detection confidence */}
+                  <span
+                    className={`absolute -top-5 left-0 rounded px-1 py-0.5 text-[10px] font-mono text-white whitespace-nowrap ${getBboxLabelBg(card.confidence)}`}
+                  >
+                    {idx === 0 && lastResult?.cardCode
+                      ? `${lastResult.cardCode} (${pct}%)`
+                      : `Card ${idx + 1} (${pct}%)`}
+                  </span>
+                </div>
+              );
+            })}
+          </>
+        )}
 
       {/* Bottom: Result / no match (only when active and not loading/error) */}
       {isActive && !isLoading && !isError && (

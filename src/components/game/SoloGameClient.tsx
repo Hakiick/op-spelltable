@@ -115,6 +115,7 @@ export default function SoloGameClient({
               onToggle={handleToggleRecognition}
               videoWidth={videoRef.current?.videoWidth}
               videoHeight={videoRef.current?.videoHeight}
+              mirror={camera.settings.mirror}
             />
           </div>
 
