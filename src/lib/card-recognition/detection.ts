@@ -1,20 +1,17 @@
 /**
- * Card detection with dual backend:
+ * Card detection via YOLOv8 ONNX model (local, no API key needed).
  *
- * 1. Roboflow Hosted API — when NEXT_PUBLIC_ROBOFLOW_API_KEY is configured.
- *    Pre-trained card detection models from Roboflow Universe.
- *    Throttled to ~1 detection per 1.5 seconds (results cached between calls).
- *    Set env vars:
- *      NEXT_PUBLIC_ROBOFLOW_API_KEY   (required)
- *      NEXT_PUBLIC_ROBOFLOW_MODEL     (default: "onepiece-card-game-legoh")
- *      NEXT_PUBLIC_ROBOFLOW_VERSION   (default: "1")
+ * Download a card detection model with:
+ *   bash scripts/download-card-detection-model.sh
  *
- * 2. ONNX Runtime Web — when a local .onnx model file exists in public/ml/.
- *    Fully client-side via WebAssembly, no API key needed.
- *    Get a model with: bash scripts/download-card-detection-model.sh
+ * This places a .onnx file in public/ml/ that is loaded at runtime
+ * via ONNX Runtime Web (WASM backend). All inference runs in-browser.
  *
- * If neither is available, detectCards() returns [] and the recognition
- * pipeline processes the full webcam frame (existing fallback in worker-bridge).
+ * If no model file is available, detectCards() returns [] and the
+ * recognition pipeline processes the full webcam frame as fallback.
+ *
+ * Pipeline:
+ *   ImageData -> letterbox + normalize -> YOLOv8 ONNX -> NMS -> geometry filter
  */
 
 import type { DetectedCard } from "@/types/ml";
@@ -38,9 +35,6 @@ const MIN_CARD_SIZE = 30;
 
 /** YOLOv8 model input resolution */
 const MODEL_SIZE = 640;
-
-/** Minimum interval between Roboflow API calls (ms) */
-const API_THROTTLE_MS = 1500;
 
 // ---------------------------------------------------------------------------
 // ONNX Runtime types (dynamically imported)
@@ -76,17 +70,7 @@ interface OrtModule {
 // Module state
 // ---------------------------------------------------------------------------
 
-type Backend = "roboflow" | "onnx" | "none";
-
-let activeBackend: Backend = "none";
-
-// Roboflow
-let rfConfig: { apiKey: string; model: string; version: string } | null = null;
-let lastApiCallTime = 0;
-let cachedDetections: DetectedCard[] = [];
-
-// ONNX
-let onnxSession: OrtSession | null = null;
+let session: OrtSession | null = null;
 let ortRef: OrtModule | null = null;
 
 // ---------------------------------------------------------------------------
@@ -94,38 +78,27 @@ let ortRef: OrtModule | null = null;
 // ---------------------------------------------------------------------------
 
 /**
- * Initialize the detection backend.
+ * Load the YOLOv8 ONNX model for card detection.
+ * Uses WASM backend with CDN-served runtime files.
  *
- * - If NEXT_PUBLIC_ROBOFLOW_API_KEY is set -> Roboflow hosted API
- * - Else try loading local ONNX model at `modelUrl`
- * - If both fail -> detection disabled (detectCards returns [])
+ * @param modelUrl Path to the .onnx model file (default: /ml/yolov8n.onnx)
+ * @throws If the model file cannot be loaded
  */
 export async function initDetectionModel(
   modelUrl = "/ml/yolov8n.onnx"
 ): Promise<void> {
-  // 1. Prefer Roboflow API when key is configured
-  const apiKey = process.env.NEXT_PUBLIC_ROBOFLOW_API_KEY ?? "";
-  if (apiKey) {
-    rfConfig = {
-      apiKey,
-      model: process.env.NEXT_PUBLIC_ROBOFLOW_MODEL || "onepiece-card-game-legoh",
-      version: process.env.NEXT_PUBLIC_ROBOFLOW_VERSION || "1",
-    };
-    activeBackend = "roboflow";
-    return;
-  }
+  if (session) return;
 
-  // 2. Fall back to local ONNX model
   const ort = (await import("onnxruntime-web")) as unknown as OrtModule;
   ortRef = ort;
+
   ort.env.wasm.wasmPaths =
     "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.2/dist/";
   ort.env.wasm.numThreads = 1;
 
-  onnxSession = await ort.InferenceSession.create(modelUrl, {
+  session = await ort.InferenceSession.create(modelUrl, {
     executionProviders: ["wasm"],
   });
-  activeBackend = "onnx";
 }
 
 /**
@@ -135,112 +108,7 @@ export async function initDetectionModel(
 export async function detectCards(
   input: ImageData
 ): Promise<DetectedCard[]> {
-  if (activeBackend === "none") return [];
-
-  try {
-    if (activeBackend === "roboflow") {
-      // Throttle API calls — return cached results between calls
-      const now = Date.now();
-      if (now - lastApiCallTime < API_THROTTLE_MS) {
-        return cachedDetections;
-      }
-      lastApiCallTime = now;
-      cachedDetections = await detectViaRoboflow(input);
-      return cachedDetections;
-    }
-
-    // ONNX — local inference, no throttling needed
-    return await detectViaOnnx(input);
-  } catch (err) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("Card detection error:", err);
-    }
-    return cachedDetections;
-  }
-}
-
-/**
- * Release detection resources.
- */
-export function disposeDetectionModel(): void {
-  if (onnxSession) {
-    void onnxSession.release();
-    onnxSession = null;
-  }
-  ortRef = null;
-  rfConfig = null;
-  activeBackend = "none";
-  cachedDetections = [];
-  lastApiCallTime = 0;
-}
-
-// ---------------------------------------------------------------------------
-// Backend 1: Roboflow Hosted Inference API
-// ---------------------------------------------------------------------------
-
-interface RfPrediction {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  confidence: number;
-  class: string;
-}
-
-async function detectViaRoboflow(
-  input: ImageData
-): Promise<DetectedCard[]> {
-  if (!rfConfig) return [];
-
-  // Convert ImageData -> base64 JPEG
-  const canvas = document.createElement("canvas");
-  canvas.width = input.width;
-  canvas.height = input.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return [];
-  ctx.putImageData(input, 0, 0);
-  const base64 = canvas.toDataURL("image/jpeg", 0.7).split(",")[1];
-
-  const url =
-    `https://detect.roboflow.com/${rfConfig.model}/${rfConfig.version}` +
-    `?api_key=${rfConfig.apiKey}&confidence=${SCORE_THRESHOLD}`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    body: base64,
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-  });
-
-  if (!res.ok) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn(`Roboflow API ${res.status}: ${res.statusText}`);
-    }
-    return cachedDetections;
-  }
-
-  const json = (await res.json()) as { predictions?: RfPrediction[] };
-  if (!json.predictions) return [];
-
-  // Roboflow returns center-x, center-y — convert to top-left
-  return filterByGeometry(
-    json.predictions.map((p) => ({
-      bbox: [
-        p.x - p.width / 2,
-        p.y - p.height / 2,
-        p.width,
-        p.height,
-      ] as [number, number, number, number],
-      confidence: p.confidence,
-    }))
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Backend 2: ONNX Runtime Web (local YOLOv8 inference)
-// ---------------------------------------------------------------------------
-
-async function detectViaOnnx(input: ImageData): Promise<DetectedCard[]> {
-  if (!onnxSession || !ortRef) return [];
+  if (!session || !ortRef) return [];
 
   const { tensor, scaleFactor } = preprocessForYolo(input);
 
@@ -251,7 +119,7 @@ async function detectViaOnnx(input: ImageData): Promise<DetectedCard[]> {
   );
 
   const feeds: Record<string, OrtTensor> = { images: inputTensor };
-  const results = await onnxSession.run(feeds);
+  const results = await session.run(feeds);
 
   const outputKey = Object.keys(results)[0];
   const output = results[outputKey];
@@ -268,7 +136,20 @@ async function detectViaOnnx(input: ImageData): Promise<DetectedCard[]> {
   return detections;
 }
 
-// --- Preprocessing: letterbox + normalize + NCHW ---
+/**
+ * Release detection resources.
+ */
+export function disposeDetectionModel(): void {
+  if (session) {
+    void session.release();
+    session = null;
+  }
+  ortRef = null;
+}
+
+// ---------------------------------------------------------------------------
+// Preprocessing: letterbox + normalize + NCHW (no OpenCV.js dependency)
+// ---------------------------------------------------------------------------
 
 function preprocessForYolo(imageData: ImageData): {
   tensor: Float32Array;
@@ -281,7 +162,6 @@ function preprocessForYolo(imageData: ImageData): {
   const maxDim = Math.max(srcW, srcH);
   const scaleFactor = maxDim / MODEL_SIZE;
 
-  // Helper to create canvas (OffscreenCanvas when available)
   const makeCanvas = (w: number, h: number) => {
     if (typeof OffscreenCanvas !== "undefined") {
       return new OffscreenCanvas(w, h);
@@ -341,7 +221,9 @@ function preprocessForYolo(imageData: ImageData): {
   return { tensor, scaleFactor };
 }
 
-// --- Post-processing: parse YOLOv8 output -> NMS -> geometry filter ---
+// ---------------------------------------------------------------------------
+// Post-processing: parse YOLOv8 output -> NMS -> geometry filter
+// ---------------------------------------------------------------------------
 
 interface RawBox {
   x: number;

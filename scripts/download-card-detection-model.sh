@@ -1,68 +1,166 @@
 #!/usr/bin/env bash
-# Downloads a YOLOv8 card detection model for browser-based card detection.
+# Downloads and exports a YOLOv8 card detection model to ONNX format.
 #
-# Two model options:
-#   1. Playing cards model from HuggingFace (recommended for TCG cards)
-#      - 52-class model trained on playing cards dataset
-#      - Works for trading card detection (Pokemon, One Piece, etc.)
-#
-#   2. Generic YOLOv8n model (COCO 80-class, geometry-based filtering)
-#      - Detects general objects, filters by card-like shape
-#
-# Usage:
-#   bash scripts/download-card-detection-model.sh           # Card-specific model
-#   bash scripts/download-card-detection-model.sh --generic  # Generic COCO model
+# Options:
+#   --roboflow   Download One Piece TCG dataset from Roboflow, train, export
+#   --huggingface Download pre-trained playing cards model from HuggingFace
+#   --generic    Export generic YOLOv8n (COCO 80-class)
+#   (no flag)    Defaults to --roboflow
 #
 # Prerequisites:
-#   pip install ultralytics
+#   pip install ultralytics roboflow
 #
-# Alternative (no local model needed):
-#   Set NEXT_PUBLIC_ROBOFLOW_API_KEY in .env.local
-#   Get a free key at https://roboflow.com (free tier, no credit card)
+# The exported ONNX model is placed in public/ml/yolov8n.onnx and used
+# by the browser-side ONNX Runtime Web inference (no API key at runtime).
 
 set -euo pipefail
 
 MODEL_DIR="public/ml"
+OUTPUT="${MODEL_DIR}/yolov8n.onnx"
+MODE="${1:---roboflow}"
+
 mkdir -p "$MODEL_DIR"
 
-MODE="${1:-card}"
+if [ -f "$OUTPUT" ]; then
+  echo "Model already exists at ${OUTPUT} ($(du -h "$OUTPUT" | cut -f1))"
+  echo "Delete it first if you want to re-download."
+  exit 0
+fi
 
-# ---- Check prerequisites ----
+# ---- Check Python ----
 if ! command -v python3 &>/dev/null; then
-  echo "Error: python3 is required but not found."
-  echo ""
-  echo "Alternative: Use the Roboflow API instead (no Python needed):"
-  echo "  1. Create a free account at https://roboflow.com"
-  echo "  2. Get your publishable API key from project settings"
-  echo "  3. Add to .env.local: NEXT_PUBLIC_ROBOFLOW_API_KEY=your_key"
+  echo "Error: python3 is required."
   exit 1
 fi
 
 if ! python3 -c "import ultralytics" 2>/dev/null; then
-  echo "Error: ultralytics not found."
-  echo ""
-  echo "  pip install ultralytics"
-  echo ""
-  echo "Then re-run this script."
-  echo ""
-  echo "Alternative: Use the Roboflow API instead (no Python needed):"
-  echo "  1. Create a free account at https://roboflow.com"
-  echo "  2. Get your publishable API key from project settings"
-  echo "  3. Add to .env.local: NEXT_PUBLIC_ROBOFLOW_API_KEY=your_key"
+  echo "Error: ultralytics not found. Run: pip install ultralytics"
   exit 1
 fi
 
-# ---- Generic COCO model ----
-if [ "$MODE" = "--generic" ]; then
-  OUTPUT="${MODEL_DIR}/yolov8n.onnx"
-
-  if [ -f "$OUTPUT" ]; then
-    echo "Model already exists at ${OUTPUT} ($(du -h "$OUTPUT" | cut -f1))"
-    echo "Delete it first if you want to re-download."
-    exit 0
+# ===========================================================================
+# Option 1: Roboflow One Piece TCG dataset → train → export
+# ===========================================================================
+if [ "$MODE" = "--roboflow" ]; then
+  if ! python3 -c "import roboflow" 2>/dev/null; then
+    echo "Error: roboflow not found. Run: pip install roboflow"
+    exit 1
   fi
 
-  echo "Exporting generic YOLOv8n (COCO) to ONNX..."
+  echo "============================================"
+  echo "  One Piece TCG Card Detection Model"
+  echo "============================================"
+  echo ""
+  echo "This will:"
+  echo "  1. Download the One Piece TCG dataset from Roboflow"
+  echo "  2. Train YOLOv8n on it (~10-30 min depending on hardware)"
+  echo "  3. Export the trained model to ONNX"
+  echo ""
+
+  # Prompt for API key if not in env
+  if [ -z "${ROBOFLOW_API_KEY:-}" ]; then
+    echo "You need a Roboflow API key (free account):"
+    echo "  1. Go to https://app.roboflow.com → Settings → API Keys"
+    echo "  2. Copy your Private API key"
+    echo ""
+    read -rp "Roboflow API key: " ROBOFLOW_API_KEY
+  fi
+
+  python3 << PYEOF
+import os
+from roboflow import Roboflow
+
+api_key = "${ROBOFLOW_API_KEY}"
+rf = Roboflow(api_key=api_key)
+
+# Download the One Piece TCG card detection dataset
+project = rf.workspace("one-piece-card-game").project("onepiece-card-game-legoh")
+version = project.version(1)
+dataset = version.download("yolov8", location="./op-card-dataset")
+
+print("Dataset downloaded to ./op-card-dataset")
+print("Starting YOLOv8n training...")
+
+from ultralytics import YOLO
+
+model = YOLO("yolov8n.pt")
+model.train(
+    data="./op-card-dataset/data.yaml",
+    epochs=50,
+    imgsz=640,
+    batch=16,
+    name="op-card-detection",
+    patience=10,
+)
+
+# Export best model to ONNX
+best_path = "./runs/detect/op-card-detection/weights/best.pt"
+if not os.path.exists(best_path):
+    # Try alternative path
+    import glob
+    candidates = glob.glob("./runs/detect/*/weights/best.pt")
+    if candidates:
+        best_path = candidates[-1]
+    else:
+        raise FileNotFoundError("Training did not produce a best.pt weights file")
+
+trained = YOLO(best_path)
+trained.export(format="onnx", imgsz=640, simplify=True)
+
+onnx_path = best_path.replace(".pt", ".onnx")
+os.rename(onnx_path, "${OUTPUT}")
+print(f"Model exported to ${OUTPUT}")
+PYEOF
+
+  # Cleanup
+  rm -rf ./op-card-dataset ./runs ./yolov8n.pt 2>/dev/null || true
+
+  echo ""
+  echo "============================================"
+  echo "  Model ready: ${OUTPUT} ($(du -h "$OUTPUT" | cut -f1))"
+  echo "============================================"
+  echo ""
+  echo "  Start the dev server and open /game/solo to test."
+  exit 0
+fi
+
+# ===========================================================================
+# Option 2: HuggingFace pre-trained playing cards model
+# ===========================================================================
+if [ "$MODE" = "--huggingface" ]; then
+  HF_REPO="mustafakemal0146/playing-cards-yolov8"
+  HF_FILE="playing_cards_model_0_playing-cards-colab.pt"
+  HF_URL="https://huggingface.co/${HF_REPO}/resolve/main/${HF_FILE}"
+
+  echo "Downloading playing cards YOLOv8n from HuggingFace..."
+
+  if command -v wget &>/dev/null; then
+    wget -q --show-progress -O "$HF_FILE" "$HF_URL"
+  elif command -v curl &>/dev/null; then
+    curl -L -o "$HF_FILE" "$HF_URL"
+  else
+    echo "Error: wget or curl required."
+    exit 1
+  fi
+
+  echo "Converting to ONNX..."
+  python3 -c "
+from ultralytics import YOLO
+model = YOLO('${HF_FILE}')
+model.export(format='onnx', imgsz=640, simplify=True)
+"
+  mv "${HF_FILE%.pt}.onnx" "$OUTPUT"
+  rm -f "$HF_FILE"
+
+  echo "Done! Model saved to ${OUTPUT} ($(du -h "$OUTPUT" | cut -f1))"
+  exit 0
+fi
+
+# ===========================================================================
+# Option 3: Generic YOLOv8n (COCO)
+# ===========================================================================
+if [ "$MODE" = "--generic" ]; then
+  echo "Exporting generic YOLOv8n (COCO 80-class) to ONNX..."
   python3 -c "
 from ultralytics import YOLO
 model = YOLO('yolov8n.pt')
@@ -74,51 +172,6 @@ model.export(format='onnx', imgsz=640, simplify=True)
   exit 0
 fi
 
-# ---- Card-specific model from HuggingFace ----
-OUTPUT="${MODEL_DIR}/yolov8n.onnx"
-HF_REPO="mustafakemal0146/playing-cards-yolov8"
-HF_FILE="playing_cards_model_0_playing-cards-colab.pt"
-HF_URL="https://huggingface.co/${HF_REPO}/resolve/main/${HF_FILE}"
-
-if [ -f "$OUTPUT" ]; then
-  echo "Model already exists at ${OUTPUT} ($(du -h "$OUTPUT" | cut -f1))"
-  echo "Delete it first if you want to re-download."
-  exit 0
-fi
-
-echo "Downloading playing cards YOLOv8n model from HuggingFace..."
-echo "  Repo: ${HF_REPO}"
-echo "  File: ${HF_FILE}"
-
-# Download the .pt file
-if command -v wget &>/dev/null; then
-  wget -q --show-progress -O "$HF_FILE" "$HF_URL"
-elif command -v curl &>/dev/null; then
-  curl -L -o "$HF_FILE" "$HF_URL"
-else
-  echo "Error: wget or curl is required for download."
-  exit 1
-fi
-
-echo "Converting to ONNX format (640x640)..."
-python3 -c "
-from ultralytics import YOLO
-model = YOLO('${HF_FILE}')
-model.export(format='onnx', imgsz=640, simplify=True)
-"
-
-# The export creates a file alongside the .pt
-ONNX_FILE="${HF_FILE%.pt}.onnx"
-mv "$ONNX_FILE" "$OUTPUT"
-rm -f "$HF_FILE"
-
-echo ""
-echo "============================================"
-echo "  Card detection model ready!"
-echo "============================================"
-echo ""
-echo "  Model:    Playing Cards YOLOv8n (52 classes)"
-echo "  Source:   HuggingFace ${HF_REPO}"
-echo "  Saved to: ${OUTPUT} ($(du -h "$OUTPUT" | cut -f1))"
-echo ""
-echo "  Start the dev server and open /game/solo to test card detection."
+echo "Unknown option: $MODE"
+echo "Usage: bash scripts/download-card-detection-model.sh [--roboflow|--huggingface|--generic]"
+exit 1
