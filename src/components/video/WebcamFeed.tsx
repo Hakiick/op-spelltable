@@ -20,7 +20,9 @@ export default function WebcamFeed({
   const videoRef = useRef<HTMLVideoElement>(null);
   const internalStreamRef = useRef<MediaStream | null>(null);
   const onStreamRef = useRef(onStream);
-  const [feedState, setFeedState] = useState<FeedState>("loading");
+
+  // Standalone mode state — managed asynchronously as camera access completes
+  const [standaloneState, setStandaloneState] = useState<FeedState>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   // Keep onStreamRef pointing to the latest callback so the standalone effect
@@ -31,20 +33,19 @@ export default function WebcamFeed({
 
   const isControlled = externalStream !== undefined;
 
-  // Controlled mode: use the provided external stream
+  // Derive feedState from props in controlled mode — avoids setState-in-effect.
+  // In standalone mode, feedState tracks the async camera acquisition process.
+  const feedState: FeedState = isControlled
+    ? externalStream
+      ? "active"
+      : "loading"
+    : standaloneState;
+
+  // Controlled mode: sync the video element with the provided stream
   useEffect(() => {
     if (!isControlled) return;
-
-    if (externalStream) {
-      if (videoRef.current) {
-        videoRef.current.srcObject = externalStream;
-      }
-      setFeedState("active");
-    } else {
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-      setFeedState("loading");
+    if (videoRef.current) {
+      videoRef.current.srcObject = externalStream ?? null;
     }
   }, [externalStream, isControlled]);
 
@@ -72,7 +73,7 @@ export default function WebcamFeed({
           videoRef.current.srcObject = mediaStream;
         }
 
-        setFeedState("active");
+        setStandaloneState("active");
         onStreamRef.current?.(mediaStream);
       } catch (err) {
         if (cancelled) return;
@@ -91,7 +92,7 @@ export default function WebcamFeed({
           setErrorMessage("An unexpected error occurred while accessing the camera.");
         }
 
-        setFeedState("error");
+        setStandaloneState("error");
       }
     }
 
@@ -104,7 +105,6 @@ export default function WebcamFeed({
         internalStreamRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isControlled]);
 
   return (

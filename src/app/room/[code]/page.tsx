@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { getRoomByCode } from "@/lib/database/rooms";
 import { validateRoomCode } from "@/lib/webrtc/room-utils";
@@ -55,12 +56,12 @@ export default async function RoomPage({ params }: RoomPageProps) {
           Room <span className="font-mono font-semibold text-white">{code}</span> is no
           longer active.
         </p>
-        <a
+        <Link
           href="/room"
           className="mt-2 inline-flex min-h-[44px] items-center rounded-lg bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           Create a new room
-        </a>
+        </Link>
       </div>
     );
   }
