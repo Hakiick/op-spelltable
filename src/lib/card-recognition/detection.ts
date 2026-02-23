@@ -21,7 +21,7 @@ import type { DetectedCard } from "@/types/ml";
 // ---------------------------------------------------------------------------
 
 /** Minimum confidence to keep a detection */
-const SCORE_THRESHOLD = 0.15;
+const SCORE_THRESHOLD = 0.25;
 
 /** IoU threshold for non-maximum suppression */
 const IOU_THRESHOLD = 0.45;

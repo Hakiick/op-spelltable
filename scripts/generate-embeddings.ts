@@ -120,13 +120,111 @@ type SharpInstance = {
     opts: { fit: string; background?: { r: number; g: number; b: number } }
   ) => SharpInstance;
   removeAlpha: () => SharpInstance;
-  rotate: (angle: number, opts?: { background: { r: number; g: number; b: number; alpha: number } }) => SharpInstance;
-  modulate: (opts: { brightness?: number; saturation?: number }) => SharpInstance;
+  rotate: (
+    angle: number,
+    opts?: { background: { r: number; g: number; b: number; alpha: number } }
+  ) => SharpInstance;
+  modulate: (opts: {
+    brightness?: number;
+    saturation?: number;
+  }) => SharpInstance;
   blur: (sigma?: number) => SharpInstance;
   flop: () => SharpInstance;
+  png: () => SharpInstance;
+  extract: (opts: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  }) => SharpInstance;
   raw: () => { toBuffer: () => Promise<Buffer> };
+  toBuffer: () => Promise<Buffer>;
+  metadata: () => Promise<{ width?: number; height?: number }>;
 };
-type SharpFn = (input: Buffer) => SharpInstance;
+type SharpFn = {
+  (input: Buffer): SharpInstance;
+  (
+    input: Buffer,
+    opts: { raw: { width: number; height: number; channels: number } }
+  ): SharpInstance;
+};
+
+/**
+ * Removes the SAMPLE watermark from a raw RGB buffer by detecting bright,
+ * desaturated pixels (the gray/white SAMPLE text) and replacing them with
+ * the local average of nearby colored pixels. This is done BEFORE generating
+ * embeddings so that reference embeddings match real (unwatermarked) cards.
+ *
+ * @param rgbBuffer Raw RGB buffer (3 bytes per pixel, row-major)
+ * @param width Image width
+ * @param height Image height
+ * @returns New buffer with SAMPLE text replaced by local color averages
+ */
+function removeSampleWatermark(
+  rgbBuffer: Buffer,
+  width: number,
+  height: number
+): Buffer {
+  const result = Buffer.from(rgbBuffer);
+  const pixelCount = width * height;
+
+  // Step 1: Build a mask of SAMPLE-like pixels
+  const isSample = new Uint8Array(pixelCount);
+  for (let i = 0; i < pixelCount; i++) {
+    const r = rgbBuffer[i * 3] / 255;
+    const g = rgbBuffer[i * 3 + 1] / 255;
+    const b = rgbBuffer[i * 3 + 2] / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const d = max - min;
+    const s = max === 0 ? 0 : d / max;
+    const v = max;
+
+    // SAMPLE text: bright + desaturated (gray/white overlaid on card art)
+    if (v > 0.55 && s < 0.2) {
+      isSample[i] = 1;
+    }
+  }
+
+  // Step 2: For each SAMPLE pixel, replace with average of non-SAMPLE
+  // neighbors in a 7x7 window
+  const radius = 3;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (!isSample[idx]) continue;
+
+      let sumR = 0,
+        sumG = 0,
+        sumB = 0,
+        count = 0;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+          const ni = ny * width + nx;
+          if (isSample[ni]) continue; // Skip other SAMPLE pixels
+          sumR += rgbBuffer[ni * 3];
+          sumG += rgbBuffer[ni * 3 + 1];
+          sumB += rgbBuffer[ni * 3 + 2];
+          count++;
+        }
+      }
+
+      if (count > 0) {
+        result[idx * 3] = Math.round(sumR / count);
+        result[idx * 3 + 1] = Math.round(sumG / count);
+        result[idx * 3 + 2] = Math.round(sumB / count);
+      }
+      // If no non-SAMPLE neighbors found (large SAMPLE region), leave as-is
+      // — the saturation boost will handle these residuals
+    }
+  }
+
+  return result;
+}
 
 /**
  * Generates augmented versions of a card image buffer for more robust embeddings.
@@ -155,12 +253,8 @@ async function generateAugmentedInputs(
 
   for (const augment of augmentations.slice(0, AUGMENT_COUNT)) {
     const pipeline = augment(sharpFn(imageBuffer));
-    // Boost saturation before resize to reduce the impact of the gray
-    // SAMPLE watermark on the embedding. The SAMPLE text is desaturated
-    // (gray/white) while card art is colorful, so higher saturation
-    // makes the art features more dominant in the embedding.
+    // No saturation boost — SAMPLE watermark is removed at pixel level now.
     const resizedBuffer = await pipeline
-      .modulate({ saturation: 1.5 })
       .resize(INPUT_SIZE, INPUT_SIZE, {
         fit: "contain",
         background: { r: 128, g: 128, b: 128 },
@@ -209,7 +303,9 @@ const HIST_S_BINS = 8;
 const HIST_V_BINS = 8;
 
 function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
-  r /= 255; g /= 255; b /= 255;
+  r /= 255;
+  g /= 255;
+  b /= 255;
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const d = max - min;
@@ -226,10 +322,7 @@ function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
 }
 
 /** Compute normalized HSV histogram from raw RGB buffer (3 bytes per pixel). */
-function computeImageHistogram(
-  rgbBuffer: Buffer,
-  size: number
-): Float32Array {
+function computeImageHistogram(rgbBuffer: Buffer, size: number): Float32Array {
   const totalBins = HIST_H_BINS * HIST_S_BINS * HIST_V_BINS;
   const histogram = new Float32Array(totalBins);
   const pixelCount = size * size;
@@ -280,8 +373,7 @@ async function generateRealDatabase(
   }
 
   try {
-    sharpFn = (await import("sharp"))
-      .default as unknown as SharpFn;
+    sharpFn = (await import("sharp")).default as unknown as SharpFn;
   } catch {
     console.error(
       "  ERROR: Could not load sharp. Install it with: npm install --save-dev sharp"
@@ -307,9 +399,41 @@ async function generateRealDatabase(
       );
 
       // Download image
-      const imageBuffer = await downloadImage(card.imageUrl);
+      const rawImageBuffer = await downloadImage(card.imageUrl);
 
-      // Compute color histogram from the original image (HSV, skip SAMPLE-like pixels)
+      // Remove SAMPLE watermark from the reference image.
+      // The SAMPLE text is bright+desaturated — we replace those pixels
+      // with the local average of surrounding colored pixels so that
+      // reference embeddings match real (unwatermarked) cards.
+      const { width: imgW, height: imgH } =
+        await sharpFn(rawImageBuffer).metadata();
+      const rawRgb = await sharpFn(rawImageBuffer)
+        .removeAlpha()
+        .raw()
+        .toBuffer();
+      const cleanRgb = removeSampleWatermark(rawRgb, imgW!, imgH!);
+
+      // Crop to artwork region — the most discriminative part of the card.
+      // OP TCG cards have a standardized layout: art occupies roughly
+      // 18%-62% vertically and 8%-92% horizontally.
+      const artTop = Math.round(imgH! * 0.18);
+      const artBottom = Math.round(imgH! * 0.62);
+      const artLeft = Math.round(imgW! * 0.08);
+      const artRight = Math.round(imgW! * 0.92);
+
+      const imageBuffer = await sharpFn(cleanRgb, {
+        raw: { width: imgW!, height: imgH!, channels: 3 },
+      })
+        .extract({
+          left: artLeft,
+          top: artTop,
+          width: artRight - artLeft,
+          height: artBottom - artTop,
+        })
+        .png()
+        .toBuffer();
+
+      // Compute color histogram from the cleaned image (HSV, skip SAMPLE-like pixels)
       const histogramBuffer = await sharpFn(imageBuffer)
         .resize(INPUT_SIZE, INPUT_SIZE, {
           fit: "contain",
@@ -321,7 +445,10 @@ async function generateRealDatabase(
       const histogram = computeImageHistogram(histogramBuffer, INPUT_SIZE);
 
       // Generate augmented versions and compute embeddings for each
-      const augmentedInputs = await generateAugmentedInputs(imageBuffer, sharpFn);
+      const augmentedInputs = await generateAugmentedInputs(
+        imageBuffer,
+        sharpFn as (input: Buffer) => SharpInstance
+      );
       const augmentedEmbeddings: Float32Array[] = [];
 
       for (const input of augmentedInputs) {

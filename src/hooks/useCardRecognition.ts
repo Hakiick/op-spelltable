@@ -20,7 +20,7 @@ import type {
 const DEFAULT_CONFIG: RecognitionConfig = {
   confidenceThreshold: 0.0,
   inputSize: 224,
-  maxCandidates: 5,
+  maxCandidates: 20,
   frameSkip: 5,
 };
 

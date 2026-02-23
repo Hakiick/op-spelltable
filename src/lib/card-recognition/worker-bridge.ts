@@ -375,19 +375,31 @@ export function createWorkerBridge(
         );
       }
 
+      // Step 2c: Crop to artwork region to match reference embeddings.
+      // OP TCG cards have art at ~18%-62% vertically, ~8%-92% horizontally.
+      const artTop = Math.round(recognitionInput.height * 0.18);
+      const artHeight = Math.round(recognitionInput.height * 0.44);
+      const artLeft = Math.round(recognitionInput.width * 0.08);
+      const artWidth = Math.round(recognitionInput.width * 0.84);
+      const artCrop = cropFromImageData(
+        recognitionInput,
+        artLeft,
+        artTop,
+        artWidth,
+        artHeight
+      );
+
+      console.log(
+        `[ArtCrop] ${artCrop.width}x${artCrop.height} (from ${recognitionInput.width}x${recognitionInput.height})`
+      );
+
       // Step 3: Preprocess and run MobileNetV3 on BOTH orientations
       // (normal + horizontally flipped) to handle mirrored webcam streams.
       const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
-      const flippedInput = flipImageDataHorizontally(recognitionInput);
+      const flippedArt = flipImageDataHorizontally(artCrop);
 
-      const preprocessedNormal = preprocessFrame(
-        recognitionInput,
-        config.inputSize
-      );
-      const preprocessedFlipped = preprocessFrame(
-        flippedInput,
-        config.inputSize
-      );
+      const preprocessedNormal = preprocessFrame(artCrop, config.inputSize);
+      const preprocessedFlipped = preprocessFrame(flippedArt, config.inputSize);
 
       const [embNormal, embFlipped] = await Promise.all(
         [preprocessedNormal, preprocessedFlipped].map(async (pp) => {
@@ -409,9 +421,9 @@ export function createWorkerBridge(
         })
       );
 
-      // Compute color histograms for hybrid matching (robust to SAMPLE watermark)
-      const histNormal = computeHistogram(recognitionInput);
-      const histFlipped = computeHistogram(flippedInput);
+      // Compute color histograms for hybrid matching (on art crop)
+      const histNormal = computeHistogram(artCrop);
+      const histFlipped = computeHistogram(flippedArt);
 
       const candidatesNormal = findTopCandidates(
         embNormal,
