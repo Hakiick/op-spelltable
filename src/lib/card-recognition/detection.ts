@@ -6,8 +6,8 @@
  *    Throttled to ~1 detection per 1.5 seconds (results cached between calls).
  *    Set env vars:
  *      NEXT_PUBLIC_ROBOFLOW_API_KEY   (required)
- *      NEXT_PUBLIC_ROBOFLOW_MODEL     (default: "playing-cards-ow27d")
- *      NEXT_PUBLIC_ROBOFLOW_VERSION   (default: "2")
+ *      NEXT_PUBLIC_ROBOFLOW_MODEL     (default: "onepiece-card-game-legoh")
+ *      NEXT_PUBLIC_ROBOFLOW_VERSION   (default: "1")
  *
  * 2. ONNX Runtime Web — when a local .onnx model file exists in public/ml/.
  *    Fully client-side via WebAssembly, no API key needed.
@@ -108,8 +108,8 @@ export async function initDetectionModel(
   if (apiKey) {
     rfConfig = {
       apiKey,
-      model: process.env.NEXT_PUBLIC_ROBOFLOW_MODEL || "playing-cards-ow27d",
-      version: process.env.NEXT_PUBLIC_ROBOFLOW_VERSION || "2",
+      model: process.env.NEXT_PUBLIC_ROBOFLOW_MODEL || "onepiece-card-game-legoh",
+      version: process.env.NEXT_PUBLIC_ROBOFLOW_VERSION || "1",
     };
     activeBackend = "roboflow";
     return;
