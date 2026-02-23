@@ -1,6 +1,7 @@
 import type {
   RecognitionConfig,
   RecognitionOutput,
+  RecognitionResult,
   DetectedCard,
   WorkerMessage,
   WorkerResponse,
@@ -53,16 +54,19 @@ function cropFromImageData(
   return cropped;
 }
 
+export interface RecognizeResult {
+  result: RecognitionOutput;
+  topCandidates: RecognitionResult[];
+  fps: number;
+  detectedCards: DetectedCard[];
+}
+
 export interface WorkerBridge {
   initialize(modelUrl: string, embeddingsUrl: string): Promise<void>;
   recognize(
     imageData: ImageData,
     config: RecognitionConfig
-  ): Promise<{
-    result: RecognitionOutput;
-    fps: number;
-    detectedCards: DetectedCard[];
-  }>;
+  ): Promise<RecognizeResult>;
   dispose(): void;
   isUsingWorker(): boolean;
 }
@@ -221,11 +225,7 @@ export function createWorkerBridge(
   async function recognize(
     imageData: ImageData,
     config: RecognitionConfig
-  ): Promise<{
-    result: RecognitionOutput;
-    fps: number;
-    detectedCards: DetectedCard[];
-  }> {
+  ): Promise<RecognizeResult> {
     if (usingWorker && worker) {
       const w = worker;
       // Clone the ImageData before sending to worker to avoid detached buffer issues
@@ -235,19 +235,21 @@ export function createWorkerBridge(
         imageData.height
       );
 
-      return new Promise<{
-        result: RecognitionOutput;
-        fps: number;
-        detectedCards: DetectedCard[];
-      }>((resolve, reject) => {
+      return new Promise<RecognizeResult>((resolve, reject) => {
         const handleMessage = (event: MessageEvent<WorkerResponse>): void => {
           clearTimeout(timeout);
           w.removeEventListener("message", handleMessage);
           w.removeEventListener("error", onError);
           if (event.data.type === "result") {
             // Worker path doesn't support detection yet — return empty
+            const workerResult = event.data.data;
+            const workerCandidates: RecognitionResult[] =
+              workerResult.cardCode !== null
+                ? [workerResult as RecognitionResult]
+                : [];
             resolve({
-              result: event.data.data,
+              result: workerResult,
+              topCandidates: workerCandidates,
               fps: event.data.fps,
               detectedCards: [],
             });
@@ -293,6 +295,7 @@ export function createWorkerBridge(
           candidateCount: 0,
           durationMs: Date.now() - start,
         },
+        topCandidates: [],
         fps,
         detectedCards: [],
       };
@@ -303,7 +306,7 @@ export function createWorkerBridge(
       const detectedCards = await detectCards(imageData);
 
       // Step 2: Determine input for MobileNetV3
-      // If detection found cards → crop the best one
+      // If detection found cards → crop the best one (with padding)
       // If detection unavailable/empty → use the full frame as fallback
       let recognitionInput: ImageData;
       let sorted: DetectedCard[] = [];
@@ -312,12 +315,16 @@ export function createWorkerBridge(
         sorted = [...detectedCards].sort((a, b) => b.confidence - a.confidence);
         const bestDetection = sorted[0];
         const [bx, by, bw, bh] = bestDetection.bbox;
+
+        // Add 10% padding around the bbox to ensure the full card is captured
+        const padX = bw * 0.1;
+        const padY = bh * 0.1;
         recognitionInput = cropFromImageData(
           imageData,
-          Math.round(bx),
-          Math.round(by),
-          Math.round(bw),
-          Math.round(bh)
+          Math.round(bx - padX),
+          Math.round(by - padY),
+          Math.round(bw + padX * 2),
+          Math.round(bh + padY * 2)
         );
       } else {
         // No detection model or no cards found — process full frame
@@ -362,6 +369,7 @@ export function createWorkerBridge(
             candidateCount: 0,
             durationMs,
           },
+          topCandidates: [],
           fps,
           detectedCards: sorted,
         };
@@ -375,6 +383,7 @@ export function createWorkerBridge(
           candidateCount: candidates.length,
           durationMs,
         },
+        topCandidates: candidates.map((c) => ({ ...c, durationMs })),
         fps,
         detectedCards: sorted,
       };
@@ -387,6 +396,7 @@ export function createWorkerBridge(
           candidateCount: 0,
           durationMs: Date.now() - start,
         },
+        topCandidates: [],
         fps,
         detectedCards: [],
       };

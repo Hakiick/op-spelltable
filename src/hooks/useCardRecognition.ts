@@ -13,7 +13,6 @@ import { captureFrame } from "@/lib/card-recognition/capture";
 import type {
   CardRecognitionState,
   RecognitionConfig,
-  RecognitionResult,
   CropRegion,
   DetectedCard,
 } from "@/types/ml";
@@ -21,7 +20,7 @@ import type {
 const DEFAULT_CONFIG: RecognitionConfig = {
   confidenceThreshold: 0.0,
   inputSize: 224,
-  maxCandidates: 3,
+  maxCandidates: 5,
   frameSkip: 5,
 };
 
@@ -156,15 +155,13 @@ export function useCardRecognition(
             setState((prev) => ({ ...prev, status: "processing" }));
 
             void bridge.recognize(imageData, currentConfig).then(
-              ({ result, fps, detectedCards }) => {
+              ({ result, fps, detectedCards, topCandidates }) => {
                 recognizingRef.current = false;
-                const candidates: RecognitionResult[] =
-                  result.cardCode !== null ? [result as RecognitionResult] : [];
                 setState((prev) => ({
                   ...prev,
                   status: "ready",
                   lastResult: result,
-                  topCandidates: candidates,
+                  topCandidates,
                   detectedCards: detectedCards ?? [],
                   fps,
                 }));
@@ -226,18 +223,14 @@ export function useCardRecognition(
         }
 
         const bridge = getBridge();
-        const { result, fps, detectedCards } = await bridge.recognize(
-          capture.imageData,
-          config
-        );
-        const candidates: RecognitionResult[] =
-          result.cardCode !== null ? [result as RecognitionResult] : [];
+        const { result, fps, detectedCards, topCandidates } =
+          await bridge.recognize(capture.imageData, config);
 
         setState((prev) => ({
           ...prev,
           status: "ready",
           lastResult: result,
-          topCandidates: candidates,
+          topCandidates,
           detectedCards: detectedCards ?? [],
           fps,
         }));

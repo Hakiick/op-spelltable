@@ -144,6 +144,8 @@ describe("preprocessFrame", () => {
       drawImage: vi.fn(),
       getImageData: vi.fn(),
       putImageData: vi.fn(),
+      fillRect: vi.fn(),
+      fillStyle: "",
     } as unknown as CanvasRenderingContext2D;
 
     mockSourceCanvas = {
@@ -163,11 +165,11 @@ describe("preprocessFrame", () => {
       (tagName: string) => {
         if (tagName === "canvas") {
           canvasCreateCount++;
-          // preprocessFrame creates target canvas first, then source canvas
-          // First call in preprocess.ts (target canvas for output)
-          if (canvasCreateCount === 1) return mockCanvas;
-          // Second call (source canvas for putImageData)
-          return mockSourceCanvas;
+          // preprocessFrame creates source canvas first, then target canvas
+          // First call (source canvas for putImageData)
+          if (canvasCreateCount === 1) return mockSourceCanvas;
+          // Second call (target canvas for letterboxed output)
+          return mockCanvas;
         }
         return originalCreateElement(tagName);
       }
@@ -204,6 +206,16 @@ describe("preprocessFrame", () => {
     preprocessFrame(imageData, inputSize);
 
     expect(mockSourceCtx.putImageData).toHaveBeenCalledWith(imageData, 0, 0);
+  });
+
+  it("fills target canvas with gray before drawing (letterbox)", () => {
+    const inputSize = 4;
+    setupResizedPixels(inputSize);
+    const imageData = new MockImageData(100, 100) as unknown as ImageData;
+    preprocessFrame(imageData, inputSize);
+
+    expect(mockCtx.fillStyle).toBe("rgb(128,128,128)");
+    expect(mockCtx.fillRect).toHaveBeenCalledWith(0, 0, inputSize, inputSize);
   });
 
   it("calls getImageData on target context with correct dimensions", () => {

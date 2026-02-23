@@ -158,14 +158,15 @@ async function generateRealDatabase(
       // Download image
       const imageBuffer = await downloadImage(card.imageUrl);
 
-      // Resize with sharp — use fit:'fill' to match the browser's canvas drawImage
-      // which stretches (not crops) to fill the target dimensions.
+      // Letterbox resize with sharp — fit:'contain' preserves aspect ratio
+      // and pads with gray (128). This matches the browser's preprocessFrame()
+      // which also letterboxes with gray before feeding to MobileNetV3.
       const resizedBuffer = await (
         sharp as unknown as (input: Buffer) => {
           resize: (
             w: number,
             h: number,
-            opts: { fit: string }
+            opts: { fit: string; background: { r: number; g: number; b: number } }
           ) => {
             removeAlpha: () => {
               raw: () => { toBuffer: () => Promise<Buffer> };
@@ -173,7 +174,10 @@ async function generateRealDatabase(
           };
         }
       )(imageBuffer)
-        .resize(INPUT_SIZE, INPUT_SIZE, { fit: "fill" })
+        .resize(INPUT_SIZE, INPUT_SIZE, {
+          fit: "contain",
+          background: { r: 128, g: 128, b: 128 },
+        })
         .removeAlpha()
         .raw()
         .toBuffer();
