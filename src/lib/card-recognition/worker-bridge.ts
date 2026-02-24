@@ -21,6 +21,7 @@ import {
 import { recognizeCardCode, disposeOcrWorker } from "./ocr";
 import { computeHistogram } from "./histogram";
 import { detectBorderColor } from "./color-filter";
+import { computeDHash } from "./dhash";
 
 const FPS_WINDOW_SIZE = 10;
 
@@ -425,13 +426,18 @@ export function createWorkerBridge(
       const histNormal = computeHistogram(artCrop);
       const histFlipped = computeHistogram(flippedArt);
 
+      // Compute dHash for structural matching (on art crop)
+      const dhashNormal = computeDHash(artCrop);
+      const dhashFlipped = computeDHash(flippedArt);
+
       const candidatesNormal = findTopCandidates(
         embNormal,
         fallbackDb,
         config.maxCandidates,
         config.confidenceThreshold,
         histNormal,
-        detectedColor
+        detectedColor,
+        dhashNormal
       );
       const candidatesFlipped = findTopCandidates(
         embFlipped,
@@ -439,7 +445,8 @@ export function createWorkerBridge(
         config.maxCandidates,
         config.confidenceThreshold,
         histFlipped,
-        detectedColor
+        detectedColor,
+        dhashFlipped
       );
 
       // Pick the orientation that produced the highest-confidence match

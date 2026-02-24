@@ -19,6 +19,7 @@ export interface EmbeddingEntry {
   embedding: number[];
   histogram?: number[];
   color?: string;
+  dhash?: number[] | string; // gradient histogram descriptor (number[]) or legacy hex string
 }
 
 export interface ReferenceEmbedding {
@@ -26,6 +27,7 @@ export interface ReferenceEmbedding {
   embedding: Float32Array;
   histogram?: Float32Array;
   color?: string;
+  dhash?: Float32Array; // gradient histogram descriptor
 }
 
 export interface EmbeddingDatabase {

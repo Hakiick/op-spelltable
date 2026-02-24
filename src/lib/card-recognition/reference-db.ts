@@ -3,6 +3,7 @@ import type {
   ReferenceEmbedding,
   RecognitionResult,
 } from "@/types/ml";
+import { hexToDHash, dHashSimilarity } from "./dhash";
 
 export interface ReferenceDatabase {
   embeddings: ReferenceEmbedding[];
@@ -81,6 +82,7 @@ export async function loadReferenceDatabase(
     embedding: normalizeEmbedding(new Float32Array(entry.embedding)),
     histogram: entry.histogram ? new Float32Array(entry.histogram) : undefined,
     color: entry.color,
+    dhash: entry.dhash ? hexToDHash(entry.dhash) : undefined,
   }));
 
   return {
@@ -151,9 +153,16 @@ function histogramIntersection(a: Float32Array, b: Float32Array): number {
 
 /**
  * Finds the top-K most similar cards in the reference database for a query embedding.
- * Uses a hybrid score combining MobileNetV3 cosine similarity and HSV color histogram
- * intersection when histograms are available. The histogram signal helps overcome the
- * SAMPLE watermark issue since color distributions are robust to text overlays.
+ * Uses a multi-signal hybrid score combining:
+ * - MobileNetV3 cosine similarity (semantic features)
+ * - HSV color histogram intersection (color distribution)
+ * - dHash similarity (structural layout patterns)
+ *
+ * Weights adapt based on available signals:
+ * - All 3 signals: 0.55 emb + 0.20 hist + 0.25 dhash
+ * - Emb + dHash:   0.70 emb + 0.30 dhash
+ * - Emb + hist:    0.85 emb + 0.15 hist
+ * - Emb only:      1.00 emb
  *
  * When a colorFilter is provided, only reference cards matching that color are scored,
  * dramatically reducing the search space (e.g. from ~127 to ~21 cards for Yellow).
@@ -164,6 +173,7 @@ function histogramIntersection(a: Float32Array, b: Float32Array): number {
  * @param threshold - Minimum score to include a candidate
  * @param queryHistogram - Optional HSV color histogram of the query image
  * @param colorFilter - Optional card border color to pre-filter candidates
+ * @param queryDHash - Optional 64-bit difference hash of the query art crop
  */
 export function findTopCandidates(
   query: Float32Array,
@@ -171,26 +181,46 @@ export function findTopCandidates(
   topK: number,
   threshold: number,
   queryHistogram?: Float32Array,
-  colorFilter?: string | null
+  colorFilter?: string | null,
+  queryDHash?: Float32Array
 ): RecognitionResult[] {
   const normalizedQuery = normalizeEmbedding(query);
   const useHistogram =
     !!queryHistogram && db.embeddings.some((e) => e.histogram);
+  const useDHash =
+    queryDHash !== undefined && db.embeddings.some((e) => e.dhash !== undefined);
 
   const scored: Array<{ cardCode: string; similarity: number }> = [];
 
   for (const ref of db.embeddings) {
-    // Skip cards that don't match the detected border color
-    if (colorFilter && ref.color && ref.color !== colorFilter) continue;
-
     const embSim = cosineSimilarity(normalizedQuery, ref.embedding);
+    let finalScore: number;
 
-    let finalScore = embSim;
-    if (useHistogram && ref.histogram && queryHistogram) {
+    if (useHistogram && useDHash && ref.histogram && queryHistogram && ref.dhash !== undefined) {
+      // All 3 signals: spatial color dominates (pixel-based, best domain transfer)
       const histSim = histogramIntersection(queryHistogram, ref.histogram);
-      // Use histogram as a small boost only — webcam colors differ significantly
-      // from reference images due to lighting/white balance differences.
+      const dhSim = dHashSimilarity(queryDHash, ref.dhash);
+      finalScore = 0.25 * embSim + 0.10 * histSim + 0.65 * dhSim;
+    } else if (useDHash && ref.dhash !== undefined) {
+      // Embedding + spatial color
+      const dhSim = dHashSimilarity(queryDHash, ref.dhash);
+      finalScore = 0.30 * embSim + 0.70 * dhSim;
+    } else if (useHistogram && ref.histogram && queryHistogram) {
+      // Embedding + color histogram
+      const histSim = histogramIntersection(queryHistogram, ref.histogram);
       finalScore = 0.85 * embSim + 0.15 * histSim;
+    } else {
+      // Embedding only
+      finalScore = embSim;
+    }
+
+    // Soft color boost: matching color gets a bonus instead of hard-filtering.
+    // Webcam lighting can cause misdetection (e.g. Yellow → Green), so hard
+    // filtering would exclude the correct card entirely.
+    if (colorFilter && ref.color) {
+      if (ref.color === colorFilter) {
+        finalScore += 0.05;
+      }
     }
 
     if (finalScore >= threshold) {

@@ -17,6 +17,7 @@
 
 import fs from "fs";
 import path from "path";
+import { computeDHashFromRgb, dHashToHex } from "../src/lib/card-recognition/dhash";
 
 interface CardEntry {
   cardId: string;
@@ -30,6 +31,7 @@ interface EmbeddingEntry {
   embedding: number[];
   histogram?: number[];
   color?: string;
+  dhash?: number[];
 }
 
 interface EmbeddingDatabase {
@@ -60,7 +62,7 @@ const MODEL_URL =
 const INPUT_SIZE = 224;
 
 /** Number of augmented versions to generate per card for a robust centroid embedding. */
-const AUGMENT_COUNT = 6;
+const AUGMENT_COUNT = 10;
 const DATA_DIR = path.resolve("src/data/cards");
 const OUTPUT_DIR = path.resolve("public/ml");
 
@@ -227,14 +229,61 @@ function removeSampleWatermark(
 }
 
 /**
+ * Adds Gaussian noise to a raw RGB buffer (in-place on a copy).
+ * Simulates webcam sensor noise.
+ */
+function addGaussianNoise(buffer: Buffer, sigma: number): Buffer {
+  const result = Buffer.from(buffer);
+  for (let i = 0; i < result.length; i++) {
+    // Box-Muller transform for Gaussian random
+    const u1 = Math.random() || 1e-10;
+    const u2 = Math.random();
+    const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    result[i] = Math.max(0, Math.min(255, Math.round(result[i] + z * sigma)));
+  }
+  return result;
+}
+
+/**
+ * Applies contrast jitter to a raw RGB buffer.
+ * factor > 1 increases contrast, < 1 decreases.
+ */
+function adjustContrast(buffer: Buffer, factor: number): Buffer {
+  const result = Buffer.from(buffer);
+  for (let i = 0; i < result.length; i++) {
+    const val = (result[i] - 128) * factor + 128;
+    result[i] = Math.max(0, Math.min(255, Math.round(val)));
+  }
+  return result;
+}
+
+/**
+ * Blends RGB buffer toward grayscale by a given amount (0 = no change, 1 = full grayscale).
+ * Simulates desaturated webcam under poor lighting.
+ */
+function desaturate(buffer: Buffer, amount: number): Buffer {
+  const result = Buffer.from(buffer);
+  for (let i = 0; i < result.length; i += 3) {
+    const gray = 0.299 * result[i] + 0.587 * result[i + 1] + 0.114 * result[i + 2];
+    result[i] = Math.round(result[i] * (1 - amount) + gray * amount);
+    result[i + 1] = Math.round(result[i + 1] * (1 - amount) + gray * amount);
+    result[i + 2] = Math.round(result[i + 2] * (1 - amount) + gray * amount);
+  }
+  return result;
+}
+
+/**
  * Generates augmented versions of a card image buffer for more robust embeddings.
  * Returns an array of letterboxed, normalized Float32Array buffers ready for MobileNet.
+ *
+ * Augmentations cover: rotation, brightness, blur, flip, noise, contrast, desaturation.
  */
 async function generateAugmentedInputs(
   imageBuffer: Buffer,
   sharpFn: SharpFn
 ): Promise<Float32Array[]> {
-  const augmentations: Array<(s: SharpInstance) => SharpInstance> = [
+  // Sharp-based augmentations (applied before resize)
+  const sharpAugmentations: Array<(s: SharpInstance) => SharpInstance> = [
     // 0: Original (no augmentation)
     (s) => s,
     // 1: Slight clockwise rotation
@@ -247,13 +296,29 @@ async function generateAugmentedInputs(
     (s) => s.modulate({ brightness: 0.7 }).blur(1.5),
     // 5: Horizontal flip (handles mirrored webcam streams)
     (s) => s.flop(),
+    // 6: Slightly brighter + slight saturation drop (warm webcam lighting)
+    (s) => s.modulate({ brightness: 1.15, saturation: 0.85 }),
+  ];
+
+  // Pixel-level augmentations (applied after resize to raw buffer)
+  type PixelAugment = (buf: Buffer) => Buffer;
+  const pixelAugmentations: Array<{
+    sharpAug: (s: SharpInstance) => SharpInstance;
+    pixelAug: PixelAugment;
+  }> = [
+    // 7: Gaussian noise (σ=15) — webcam sensor noise
+    { sharpAug: (s) => s, pixelAug: (buf) => addGaussianNoise(buf, 15) },
+    // 8: Low contrast (0.7×) — simulates washed-out webcam
+    { sharpAug: (s) => s, pixelAug: (buf) => adjustContrast(buf, 0.7) },
+    // 9: Slight desaturation — simulates poor white balance
+    { sharpAug: (s) => s, pixelAug: (buf) => desaturate(buf, 0.3) },
   ];
 
   const results: Float32Array[] = [];
 
-  for (const augment of augmentations.slice(0, AUGMENT_COUNT)) {
+  // Apply sharp-only augmentations
+  for (const augment of sharpAugmentations.slice(0, Math.min(sharpAugmentations.length, AUGMENT_COUNT))) {
     const pipeline = augment(sharpFn(imageBuffer));
-    // No saturation boost — SAMPLE watermark is removed at pixel level now.
     const resizedBuffer = await pipeline
       .resize(INPUT_SIZE, INPUT_SIZE, {
         fit: "contain",
@@ -268,6 +333,30 @@ async function generateAugmentedInputs(
       float32[i * 3] = resizedBuffer[i * 3] / 127.5 - 1;
       float32[i * 3 + 1] = resizedBuffer[i * 3 + 1] / 127.5 - 1;
       float32[i * 3 + 2] = resizedBuffer[i * 3 + 2] / 127.5 - 1;
+    }
+    results.push(float32);
+  }
+
+  // Apply pixel-level augmentations (up to AUGMENT_COUNT total)
+  const remaining = AUGMENT_COUNT - results.length;
+  for (const { sharpAug, pixelAug } of pixelAugmentations.slice(0, remaining)) {
+    const pipeline = sharpAug(sharpFn(imageBuffer));
+    const resizedBuffer = await pipeline
+      .resize(INPUT_SIZE, INPUT_SIZE, {
+        fit: "contain",
+        background: { r: 128, g: 128, b: 128 },
+      })
+      .removeAlpha()
+      .raw()
+      .toBuffer();
+
+    const augmentedBuffer = pixelAug(resizedBuffer);
+
+    const float32 = new Float32Array(INPUT_SIZE * INPUT_SIZE * 3);
+    for (let i = 0; i < INPUT_SIZE * INPUT_SIZE; i++) {
+      float32[i * 3] = augmentedBuffer[i * 3] / 127.5 - 1;
+      float32[i * 3 + 1] = augmentedBuffer[i * 3 + 1] / 127.5 - 1;
+      float32[i * 3 + 2] = augmentedBuffer[i * 3 + 2] / 127.5 - 1;
     }
     results.push(float32);
   }
@@ -444,6 +533,18 @@ async function generateRealDatabase(
         .toBuffer();
       const histogram = computeImageHistogram(histogramBuffer, INPUT_SIZE);
 
+      // Compute dHash from the art crop (before resize, for maximum detail)
+      const artCropRgb = await sharpFn(imageBuffer)
+        .removeAlpha()
+        .raw()
+        .toBuffer();
+      const artCropMeta = await sharpFn(imageBuffer).metadata();
+      const dhash = computeDHashFromRgb(
+        artCropRgb,
+        artCropMeta.width!,
+        artCropMeta.height!
+      );
+
       // Generate augmented versions and compute embeddings for each
       const augmentedInputs = await generateAugmentedInputs(
         imageBuffer,
@@ -471,6 +572,7 @@ async function generateRealDatabase(
         embedding: averageEmbeddings(augmentedEmbeddings),
         histogram: Array.from(histogram),
         color: card.color,
+        dhash: dHashToHex(dhash),
       });
 
       process.stdout.write("OK\n");
