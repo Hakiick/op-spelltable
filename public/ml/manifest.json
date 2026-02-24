@@ -215,7 +215,7 @@
     {
       "setCode": "ST24",
       "embeddingsUrl": "/ml/embeddings-ST24.json",
-      "cardCount": 15
+      "cardCount": 14
     },
     {
       "setCode": "ST25",
@@ -238,5 +238,5 @@
       "cardCount": 15
     }
   ],
-  "generatedAt": "2026-02-23T21:04:31.148Z"
+  "generatedAt": "2026-02-24T23:05:35.370Z"
 }
