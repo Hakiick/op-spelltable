@@ -483,7 +483,7 @@ export function createWorkerBridge(
         topCandidates: candidates.map((c, i) => {
           if (i < 5) {
             console.log(
-              `[Match] #${i + 1}: ${c.cardCode} (${(c.confidence * 100).toFixed(1)}%)`
+              `[Match] #${i + 1}: ${c.cardCode} (${(c.confidence * 100).toFixed(1)}%) color=${detectedColor ?? "?"}`
             );
           }
           return { ...c, durationMs };

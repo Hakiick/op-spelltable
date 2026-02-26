@@ -62,7 +62,7 @@ const MODEL_URL =
 const INPUT_SIZE = 224;
 
 /** Number of augmented versions to generate per card for a robust centroid embedding. */
-const AUGMENT_COUNT = 10;
+const AUGMENT_COUNT = 30;
 const DATA_DIR = path.resolve("src/data/cards");
 const OUTPUT_DIR = path.resolve("public/ml");
 
@@ -298,6 +298,32 @@ async function generateAugmentedInputs(
     (s) => s.flop(),
     // 6: Slightly brighter + slight saturation drop (warm webcam lighting)
     (s) => s.modulate({ brightness: 1.15, saturation: 0.85 }),
+    // 7: Very bright (overexposed webcam)
+    (s) => s.modulate({ brightness: 1.5 }),
+    // 8: Very dark (underexposed)
+    (s) => s.modulate({ brightness: 0.5 }),
+    // 9: Cool lighting (slightly desaturated + dark)
+    (s) => s.modulate({ brightness: 0.9, saturation: 0.8 }),
+    // 10: Warm lighting (bright + slightly saturated)
+    (s) => s.modulate({ brightness: 1.2, saturation: 1.1 }),
+    // 11: Slight blur (distance/defocus)
+    (s) => s.blur(2.0),
+    // 12: Higher rotation CW
+    (s) => s.rotate(20, { background: { r: 128, g: 128, b: 128, alpha: 1 } }),
+    // 13: Higher rotation CCW
+    (s) => s.rotate(-20, { background: { r: 128, g: 128, b: 128, alpha: 1 } }),
+    // 14: Flipped + brighter (mirrored webcam + overexposure)
+    (s) => s.flop().modulate({ brightness: 1.3 }),
+    // 15: Flipped + darker
+    (s) => s.flop().modulate({ brightness: 0.7 }),
+    // 16: High saturation (vibrant display)
+    (s) => s.modulate({ saturation: 1.4 }),
+    // 17: Low saturation (washed out)
+    (s) => s.modulate({ saturation: 0.5 }),
+    // 18: Bright + rotated
+    (s) => s.rotate(5, { background: { r: 128, g: 128, b: 128, alpha: 1 } }).modulate({ brightness: 1.2 }),
+    // 19: Dark + rotated
+    (s) => s.rotate(-5, { background: { r: 128, g: 128, b: 128, alpha: 1 } }).modulate({ brightness: 0.8 }),
   ];
 
   // Pixel-level augmentations (applied after resize to raw buffer)
@@ -306,12 +332,26 @@ async function generateAugmentedInputs(
     sharpAug: (s: SharpInstance) => SharpInstance;
     pixelAug: PixelAugment;
   }> = [
-    // 7: Gaussian noise (σ=15) — webcam sensor noise
+    // 20: Gaussian noise (σ=15) — webcam sensor noise
     { sharpAug: (s) => s, pixelAug: (buf) => addGaussianNoise(buf, 15) },
-    // 8: Low contrast (0.7×) — simulates washed-out webcam
+    // 21: Low contrast (0.7×) — simulates washed-out webcam
     { sharpAug: (s) => s, pixelAug: (buf) => adjustContrast(buf, 0.7) },
-    // 9: Slight desaturation — simulates poor white balance
+    // 22: Slight desaturation — simulates poor white balance
     { sharpAug: (s) => s, pixelAug: (buf) => desaturate(buf, 0.3) },
+    // 23: Heavy noise (σ=25) — very noisy sensor
+    { sharpAug: (s) => s, pixelAug: (buf) => addGaussianNoise(buf, 25) },
+    // 24: High contrast (1.4×) — harsh lighting
+    { sharpAug: (s) => s, pixelAug: (buf) => adjustContrast(buf, 1.4) },
+    // 25: Heavy desaturation — near-grayscale
+    { sharpAug: (s) => s, pixelAug: (buf) => desaturate(buf, 0.6) },
+    // 26: Noise + dark — noisy underexposed
+    { sharpAug: (s) => s.modulate({ brightness: 0.7 }), pixelAug: (buf) => addGaussianNoise(buf, 20) },
+    // 27: Noise + bright — noisy overexposed
+    { sharpAug: (s) => s.modulate({ brightness: 1.3 }), pixelAug: (buf) => addGaussianNoise(buf, 15) },
+    // 28: Low contrast + desaturated
+    { sharpAug: (s) => s, pixelAug: (buf) => desaturate(adjustContrast(buf, 0.8), 0.2) },
+    // 29: Flipped + noise — mirrored webcam with noise
+    { sharpAug: (s) => s.flop(), pixelAug: (buf) => addGaussianNoise(buf, 15) },
   ];
 
   const results: Float32Array[] = [];
@@ -655,30 +695,45 @@ async function main(): Promise<void> {
     `\nGenerating embeddings for: ${targetSets.join(", ")} (mock=${mock})`
   );
 
-  const manifestEntries: ManifestEntry[] = [];
+  const newEntries: ManifestEntry[] = [];
 
   for (const setCode of targetSets) {
     const entry = await processSet(setCode, mock);
     if (entry) {
-      manifestEntries.push(entry);
+      newEntries.push(entry);
     }
   }
 
-  // Write manifest
+  // Merge with existing manifest instead of overwriting
+  // This preserves entries for sets that were NOT regenerated in this run
+  const manifestPath = path.join(OUTPUT_DIR, "manifest.json");
+  const newSetCodes = new Set(newEntries.map((e) => e.setCode));
+
+  let existingEntries: ManifestEntry[] = [];
+  if (fs.existsSync(manifestPath)) {
+    const existing: Manifest = JSON.parse(
+      fs.readFileSync(manifestPath, "utf-8")
+    );
+    existingEntries = existing.sets.filter((e) => !newSetCodes.has(e.setCode));
+  }
+
+  const allEntries = [...existingEntries, ...newEntries].sort((a, b) =>
+    a.setCode.localeCompare(b.setCode)
+  );
+
   const manifest: Manifest = {
     version: "1.0.0",
     model: mock
       ? "mobilenet_v3_large_100_224_mock"
       : "mobilenet_v3_large_100_224",
-    sets: manifestEntries,
+    sets: allEntries,
     generatedAt: new Date().toISOString(),
   };
 
-  const manifestPath = path.join(OUTPUT_DIR, "manifest.json");
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
   console.log(`\nManifest written: ${manifestPath}`);
   console.log(
-    `\nDone! Generated embeddings for ${manifestEntries.length} sets.`
+    `\nDone! Generated ${newEntries.length} sets, manifest has ${allEntries.length} total sets.`
   );
 }
 

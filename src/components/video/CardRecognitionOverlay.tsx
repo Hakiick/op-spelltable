@@ -241,12 +241,12 @@ export default function CardRecognitionOverlay({
                     }}
                     aria-hidden="true"
                   >
-                    {/* Label with card code (if matched) + detection confidence */}
+                    {/* Label with card code (if matched) + confidence */}
                     <span
-                      className={`absolute -top-5 left-0 rounded px-1 py-0.5 text-[10px] font-mono text-white whitespace-nowrap ${getBboxLabelBg(card.confidence)}`}
+                      className={`absolute -top-5 left-0 rounded px-1 py-0.5 text-[10px] font-mono text-white whitespace-nowrap ${getBboxLabelBg(idx === 0 && lastResult?.cardCode ? lastResult.confidence : card.confidence)}`}
                     >
                       {idx === 0 && lastResult?.cardCode
-                        ? `${lastResult.cardCode} (${pct}%)`
+                        ? `${lastResult.cardCode} (${Math.round(lastResult.confidence * 100)}%)`
                         : `Card ${idx + 1} (${pct}%)`}
                     </span>
                   </div>

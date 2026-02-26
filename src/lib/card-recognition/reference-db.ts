@@ -190,50 +190,76 @@ export function findTopCandidates(
   const useDHash =
     queryDHash !== undefined && db.embeddings.some((e) => e.dhash !== undefined);
 
-  const scored: Array<{ cardCode: string; similarity: number }> = [];
-
-  for (const ref of db.embeddings) {
+  function scoreRef(ref: ReferenceEmbedding): { score: number; debug: string } {
     const embSim = cosineSimilarity(normalizedQuery, ref.embedding);
-    let finalScore: number;
 
     if (useHistogram && useDHash && ref.histogram && queryHistogram && ref.dhash !== undefined) {
-      // All 3 signals: spatial color dominates (pixel-based, best domain transfer)
       const histSim = histogramIntersection(queryHistogram, ref.histogram);
       const dhSim = dHashSimilarity(queryDHash, ref.dhash);
-      finalScore = 0.25 * embSim + 0.10 * histSim + 0.65 * dhSim;
+      const score = 0.50 * embSim + 0.10 * histSim + 0.40 * dhSim;
+      return { score, debug: `e=${(embSim*100).toFixed(0)} h=${(histSim*100).toFixed(0)} s=${(dhSim*100).toFixed(0)} c=${ref.color ?? "?"}` };
     } else if (useDHash && ref.dhash !== undefined) {
-      // Embedding + spatial color
       const dhSim = dHashSimilarity(queryDHash, ref.dhash);
-      finalScore = 0.30 * embSim + 0.70 * dhSim;
+      const score = 0.55 * embSim + 0.45 * dhSim;
+      return { score, debug: `e=${(embSim*100).toFixed(0)} s=${(dhSim*100).toFixed(0)} c=${ref.color ?? "?"}` };
     } else if (useHistogram && ref.histogram && queryHistogram) {
-      // Embedding + color histogram
       const histSim = histogramIntersection(queryHistogram, ref.histogram);
-      finalScore = 0.85 * embSim + 0.15 * histSim;
-    } else {
-      // Embedding only
-      finalScore = embSim;
+      const score = 0.85 * embSim + 0.15 * histSim;
+      return { score, debug: `e=${(embSim*100).toFixed(0)} h=${(histSim*100).toFixed(0)} c=${ref.color ?? "?"}` };
     }
-
-    // Soft color boost: matching color gets a bonus instead of hard-filtering.
-    // Webcam lighting can cause misdetection (e.g. Yellow → Green), so hard
-    // filtering would exclude the correct card entirely.
-    if (colorFilter && ref.color) {
-      if (ref.color === colorFilter) {
-        finalScore += 0.05;
-      }
-    }
-
-    if (finalScore >= threshold) {
-      scored.push({ cardCode: ref.cardCode, similarity: finalScore });
-    }
+    return { score: embSim, debug: `e=${(embSim*100).toFixed(0)} c=${ref.color ?? "?"}` };
   }
 
-  // Sort by descending similarity
-  scored.sort((a, b) => b.similarity - a.similarity);
+  // Two-pass strategy:
+  // Pass 1: If color detected, search only same-color cards (reduces search ~5x)
+  // Pass 2: If no good match, fall back to all cards
+  let results: Array<{ cardCode: string; similarity: number; debug: string }> = [];
 
-  // Take top-K
-  const topResults = scored.slice(0, topK);
+  if (colorFilter) {
+    const sameColorRefs = db.embeddings.filter((e) => e.color === colorFilter);
+    console.log(`[Search] Color filter: ${colorFilter} → ${sameColorRefs.length}/${db.embeddings.length} candidates`);
+
+    for (const ref of sameColorRefs) {
+      const { score, debug } = scoreRef(ref);
+      if (score >= threshold) {
+        results.push({ cardCode: ref.cardCode, similarity: score, debug });
+      }
+    }
+    results.sort((a, b) => b.similarity - a.similarity);
+
+    // If same-color search produced weak results, fall back to all cards
+    const bestSameColor = results[0]?.similarity ?? 0;
+    if (bestSameColor < 0.40) {
+      console.log(`[Search] Same-color best=${(bestSameColor*100).toFixed(1)}% < 40%, falling back to all cards`);
+      results = [];
+      for (const ref of db.embeddings) {
+        const { score, debug } = scoreRef(ref);
+        if (score >= threshold) {
+          results.push({ cardCode: ref.cardCode, similarity: score, debug });
+        }
+      }
+      results.sort((a, b) => b.similarity - a.similarity);
+    }
+  } else {
+    // No color detected — search all cards
+    console.log(`[Search] No color detected, searching all ${db.embeddings.length} cards`);
+    for (const ref of db.embeddings) {
+      const { score, debug } = scoreRef(ref);
+      if (score >= threshold) {
+        results.push({ cardCode: ref.cardCode, similarity: score, debug });
+      }
+    }
+    results.sort((a, b) => b.similarity - a.similarity);
+  }
+
+  const topResults = results.slice(0, topK);
   const candidateCount = topResults.length;
+
+  // Debug: log per-signal scores for top candidates
+  for (let i = 0; i < Math.min(topResults.length, 5); i++) {
+    const r = topResults[i];
+    console.log(`[Score] #${i+1}: ${r.cardCode} = ${(r.similarity*100).toFixed(1)}% [${r.debug}]`);
+  }
 
   return topResults.map((r) => ({
     cardCode: r.cardCode,
