@@ -11,6 +11,7 @@ function makeState(
     lastResult: null,
     topCandidates: [],
     detectedCards: [],
+    identifiedCards: [],
     error: null,
     isActive: false,
     loadingProgress: 0,

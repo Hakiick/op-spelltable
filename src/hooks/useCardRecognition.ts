@@ -22,6 +22,7 @@ const DEFAULT_CONFIG: RecognitionConfig = {
   inputSize: 224,
   maxCandidates: 20,
   frameSkip: 5,
+  maxIdentify: 5,
 };
 
 const DEFAULT_MODEL_URL =
@@ -61,6 +62,7 @@ export function useCardRecognition(
     lastResult: null,
     topCandidates: [],
     detectedCards: [],
+    identifiedCards: [],
     error: null,
     isActive: false,
     loadingProgress: 0,
@@ -155,7 +157,13 @@ export function useCardRecognition(
             setState((prev) => ({ ...prev, status: "processing" }));
 
             void bridge.recognize(imageData, currentConfig).then(
-              ({ result, fps, detectedCards, topCandidates }) => {
+              ({
+                result,
+                fps,
+                detectedCards,
+                topCandidates,
+                identifiedCards,
+              }) => {
                 recognizingRef.current = false;
                 setState((prev) => ({
                   ...prev,
@@ -163,6 +171,7 @@ export function useCardRecognition(
                   lastResult: result,
                   topCandidates,
                   detectedCards: detectedCards ?? [],
+                  identifiedCards: identifiedCards ?? [],
                   fps,
                 }));
               },
@@ -223,7 +232,7 @@ export function useCardRecognition(
         }
 
         const bridge = getBridge();
-        const { result, fps, detectedCards, topCandidates } =
+        const { result, fps, detectedCards, topCandidates, identifiedCards } =
           await bridge.recognize(capture.imageData, config);
 
         setState((prev) => ({
@@ -232,6 +241,7 @@ export function useCardRecognition(
           lastResult: result,
           topCandidates,
           detectedCards: detectedCards ?? [],
+          identifiedCards: identifiedCards ?? [],
           fps,
         }));
       } catch (err) {

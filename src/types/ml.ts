@@ -44,6 +44,7 @@ export interface RecognitionConfig {
   inputSize: number; // 224
   maxCandidates: number; // 3
   frameSkip: number; // 5
+  maxIdentify: number; // max cards to identify per frame (default: 5)
 }
 
 export type PipelineStatus =
@@ -53,11 +54,18 @@ export type PipelineStatus =
   | "processing"
   | "error";
 
+export interface IdentifiedCard extends DetectedCard {
+  cardCode: string | null;
+  matchConfidence: number;
+  candidates: RecognitionResult[];
+}
+
 export interface CardRecognitionState {
   status: PipelineStatus;
   lastResult: RecognitionOutput | null;
   topCandidates: RecognitionResult[];
   detectedCards: DetectedCard[];
+  identifiedCards: IdentifiedCard[];
   error: string | null;
   isActive: boolean;
   loadingProgress: number;

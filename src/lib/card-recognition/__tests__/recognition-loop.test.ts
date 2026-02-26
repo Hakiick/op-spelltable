@@ -44,6 +44,7 @@ const DEFAULT_CONFIG: RecognitionConfig = {
   inputSize: 224,
   maxCandidates: 3,
   frameSkip: 1, // Process every frame in tests
+  maxIdentify: 5,
 };
 
 describe("computeFpsFromTimestamps", () => {

@@ -123,6 +123,7 @@ export default function SoloGameClient({
           <RecognitionPanel
             lastResult={recognition.state.lastResult}
             topCandidates={recognition.state.topCandidates}
+            identifiedCards={recognition.state.identifiedCards}
             className="border-t border-gray-800"
           />
 

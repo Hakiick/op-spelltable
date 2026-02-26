@@ -1,6 +1,10 @@
 "use client";
 
-import type { CardRecognitionState, DetectedCard } from "@/types/ml";
+import type {
+  CardRecognitionState,
+  DetectedCard,
+  IdentifiedCard,
+} from "@/types/ml";
 
 interface CardRecognitionOverlayProps {
   state: CardRecognitionState;
@@ -50,8 +54,15 @@ export default function CardRecognitionOverlay({
   mirror = false,
   className = "",
 }: CardRecognitionOverlayProps) {
-  const { status, lastResult, detectedCards, error, loadingProgress, fps } =
-    state;
+  const {
+    status,
+    lastResult,
+    detectedCards,
+    identifiedCards,
+    error,
+    loadingProgress,
+    fps,
+  } = state;
 
   const isLoading = status === "loading";
   const isError = status === "error";
@@ -202,70 +213,86 @@ export default function CardRecognitionOverlay({
         </div>
       )}
 
-      {/* Bounding boxes for detected cards */}
+      {/* Bounding boxes for detected/identified cards */}
       {isActive &&
-        detectedCards &&
-        detectedCards.length > 0 &&
         videoWidth &&
-        videoHeight && (
-          <>
-            {detectedCards.map((card: DetectedCard, idx: number) => {
-              const [bx, by, bw, bh] = card.bbox;
-              // Convert pixel coordinates to percentages relative to video dimensions.
-              // When the video is mirrored (CSS scaleX(-1)), flip the x-coordinate
-              // so the bbox aligns with the visually mirrored card position.
-              const rawLeft = (bx / videoWidth) * 100;
-              const width = (bw / videoWidth) * 100;
-              const left = mirror ? 100 - rawLeft - width : rawLeft;
-              const top = (by / videoHeight) * 100;
-              const height = (bh / videoHeight) * 100;
-              const pct = Math.round(card.confidence * 100);
+        videoHeight &&
+        (() => {
+          // Prefer identifiedCards (has per-card match info); fall back to detectedCards
+          const cards: (DetectedCard | IdentifiedCard)[] =
+            identifiedCards && identifiedCards.length > 0
+              ? identifiedCards
+              : detectedCards && detectedCards.length > 0
+                ? detectedCards
+                : [];
+          if (cards.length === 0) return null;
 
-              // Inner crop box (10% shrink on each side = 80% of original)
-              const cropInset = 10; // percent of bbox dimension
-              const cropLeft = left + (width * cropInset) / 100;
-              const cropTop = top + (height * cropInset) / 100;
-              const cropWidth = width * (1 - (2 * cropInset) / 100);
-              const cropHeight = height * (1 - (2 * cropInset) / 100);
+          return (
+            <>
+              {cards.map((card, idx) => {
+                const [bx, by, bw, bh] = card.bbox;
+                const rawLeft = (bx / videoWidth) * 100;
+                const width = (bw / videoWidth) * 100;
+                const left = mirror ? 100 - rawLeft - width : rawLeft;
+                const top = (by / videoHeight) * 100;
+                const height = (bh / videoHeight) * 100;
 
-              return (
-                <div key={idx}>
-                  {/* Outer detection bbox */}
-                  <div
-                    className={`absolute border-2 ${getBboxBorderColor(card.confidence)} rounded pointer-events-none`}
-                    style={{
-                      left: `${left}%`,
-                      top: `${top}%`,
-                      width: `${width}%`,
-                      height: `${height}%`,
-                    }}
-                    aria-hidden="true"
-                  >
-                    {/* Label with card code (if matched) + confidence */}
-                    <span
-                      className={`absolute -top-5 left-0 rounded px-1 py-0.5 text-[10px] font-mono text-white whitespace-nowrap ${getBboxLabelBg(idx === 0 && lastResult?.cardCode ? lastResult.confidence : card.confidence)}`}
+                // Determine label text and confidence for coloring
+                const isIdentified =
+                  "cardCode" in card && (card as IdentifiedCard).candidates !== undefined;
+                const identified = isIdentified
+                  ? (card as IdentifiedCard)
+                  : null;
+                const labelConfidence =
+                  identified?.cardCode !== null && identified?.cardCode !== undefined
+                    ? identified.matchConfidence
+                    : card.confidence;
+                const labelText =
+                  identified?.cardCode
+                    ? `${identified.cardCode} (${Math.round(identified.matchConfidence * 100)}%)`
+                    : `Card ${idx + 1} (${Math.round(card.confidence * 100)}%)`;
+
+                // Inner crop box (10% shrink on each side)
+                const cropInset = 10;
+                const cropLeft = left + (width * cropInset) / 100;
+                const cropTop = top + (height * cropInset) / 100;
+                const cropWidth = width * (1 - (2 * cropInset) / 100);
+                const cropHeight = height * (1 - (2 * cropInset) / 100);
+
+                return (
+                  <div key={idx}>
+                    <div
+                      className={`absolute border-2 ${getBboxBorderColor(labelConfidence)} rounded pointer-events-none`}
+                      style={{
+                        left: `${left}%`,
+                        top: `${top}%`,
+                        width: `${width}%`,
+                        height: `${height}%`,
+                      }}
+                      aria-hidden="true"
                     >
-                      {idx === 0 && lastResult?.cardCode
-                        ? `${lastResult.cardCode} (${Math.round(lastResult.confidence * 100)}%)`
-                        : `Card ${idx + 1} (${pct}%)`}
-                    </span>
+                      <span
+                        className={`absolute -top-5 left-0 rounded px-1 py-0.5 text-[10px] font-mono text-white whitespace-nowrap ${getBboxLabelBg(labelConfidence)}`}
+                      >
+                        {labelText}
+                      </span>
+                    </div>
+                    <div
+                      className="absolute border border-dashed border-cyan-400 rounded pointer-events-none"
+                      style={{
+                        left: `${cropLeft}%`,
+                        top: `${cropTop}%`,
+                        width: `${cropWidth}%`,
+                        height: `${cropHeight}%`,
+                      }}
+                      aria-hidden="true"
+                    />
                   </div>
-                  {/* Inner recognition crop (dashed cyan) */}
-                  <div
-                    className="absolute border border-dashed border-cyan-400 rounded pointer-events-none"
-                    style={{
-                      left: `${cropLeft}%`,
-                      top: `${cropTop}%`,
-                      width: `${cropWidth}%`,
-                      height: `${cropHeight}%`,
-                    }}
-                    aria-hidden="true"
-                  />
-                </div>
-              );
-            })}
-          </>
-        )}
+                );
+              })}
+            </>
+          );
+        })()}
 
       {/* Bottom: Result / no match (only when active and not loading/error) */}
       {isActive && !isLoading && !isError && (

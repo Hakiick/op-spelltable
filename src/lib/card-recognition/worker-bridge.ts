@@ -3,6 +3,7 @@ import type {
   RecognitionOutput,
   RecognitionResult,
   DetectedCard,
+  IdentifiedCard,
   WorkerMessage,
   WorkerResponse,
 } from "@/types/ml";
@@ -83,6 +84,7 @@ export interface RecognizeResult {
   topCandidates: RecognitionResult[];
   fps: number;
   detectedCards: DetectedCard[];
+  identifiedCards: IdentifiedCard[];
 }
 
 export interface WorkerBridge {
@@ -276,6 +278,7 @@ export function createWorkerBridge(
               topCandidates: workerCandidates,
               fps: event.data.fps,
               detectedCards: [],
+              identifiedCards: [],
             });
           } else if (event.data.type === "error") {
             reject(new Error(event.data.message));
@@ -322,96 +325,46 @@ export function createWorkerBridge(
         topCandidates: [],
         fps,
         detectedCards: [],
+        identifiedCards: [],
       };
     }
 
-    try {
-      // Step 1: Try to detect card-like objects with YOLOv8n
-      const detectedCards = await detectCards(imageData);
+    /** Identify a single cropped card image via MobileNetV3 embedding matching. */
+    async function identifyCard(
+      croppedInput: ImageData,
+      model: TFModel,
+      db: ReferenceDatabase,
+      cfg: RecognitionConfig
+    ): Promise<{
+      candidates: RecognitionResult[];
+      detectedColor: string | null;
+    }> {
+      const detectedColor = detectBorderColor(croppedInput);
 
-      // Step 2: Determine input for MobileNetV3
-      // If detection found cards → crop the best one (with padding)
-      // If detection unavailable/empty → use the full frame as fallback
-      let recognitionInput: ImageData;
-      let sorted: DetectedCard[] = [];
-
-      if (detectedCards.length > 0) {
-        sorted = [...detectedCards].sort((a, b) => b.confidence - a.confidence);
-        const bestDetection = sorted[0];
-        const [bx, by, bw, bh] = bestDetection.bbox;
-
-        // Shrink the bbox by 10% on each edge to counteract the tendency of
-        // YOLOv8 detections to be slightly larger than the actual card.
-        const shrinkX = bw * 0.1;
-        const shrinkY = bh * 0.1;
-        recognitionInput = cropFromImageData(
-          imageData,
-          Math.round(bx + shrinkX),
-          Math.round(by + shrinkY),
-          Math.round(bw - shrinkX * 2),
-          Math.round(bh - shrinkY * 2)
-        );
-      } else {
-        // No detection model or no cards found — process full frame
-        recognitionInput = imageData;
-      }
-
-      // OCR-based card code detection is available (see ./ocr.ts) but
-      // disabled in the hot loop — webcam resolution is typically too low
-      // for reliable reading of the small card code text. We keep the module
-      // for potential future use with higher-resolution captures.
-
-      // Step 2b: Detect border color for pre-filtering the reference database
-      const detectedColor = detectBorderColor(recognitionInput);
-
-      console.log(
-        `[Recognition] Crop: ${recognitionInput.width}x${recognitionInput.height} (from ${imageData.width}x${imageData.height}), color=${detectedColor ?? "unknown"}`
-      );
-
-      // Debug: log crop dimensions + detection info
-      if (sorted.length > 0) {
-        const [, , bw, bh] = sorted[0].bbox;
-        console.log(
-          `[Detection] Best bbox: ${Math.round(bw)}x${Math.round(bh)} conf=${(sorted[0].confidence * 100).toFixed(0)}%`
-        );
-      }
-
-      // Step 2c: Crop to artwork region to match reference embeddings.
-      // OP TCG cards have art at ~18%-62% vertically, ~8%-92% horizontally.
-      const artTop = Math.round(recognitionInput.height * 0.18);
-      const artHeight = Math.round(recognitionInput.height * 0.44);
-      const artLeft = Math.round(recognitionInput.width * 0.08);
-      const artWidth = Math.round(recognitionInput.width * 0.84);
+      // Art crop: OP TCG cards have art at ~18%-62% vertically, ~8%-92% horizontally
+      const artTop = Math.round(croppedInput.height * 0.18);
+      const artHeight = Math.round(croppedInput.height * 0.44);
+      const artLeft = Math.round(croppedInput.width * 0.08);
+      const artWidth = Math.round(croppedInput.width * 0.84);
       const artCrop = cropFromImageData(
-        recognitionInput,
+        croppedInput,
         artLeft,
         artTop,
         artWidth,
         artHeight
       );
 
-      console.log(
-        `[ArtCrop] ${artCrop.width}x${artCrop.height} (from ${recognitionInput.width}x${recognitionInput.height})`
-      );
-
-      // Step 3: Preprocess and run MobileNetV3 on BOTH orientations
-      // (normal + horizontally flipped) to handle mirrored webcam streams.
       const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
       const flippedArt = flipImageDataHorizontally(artCrop);
 
-      const preprocessedNormal = preprocessFrame(artCrop, config.inputSize);
-      const preprocessedFlipped = preprocessFrame(flippedArt, config.inputSize);
+      const preprocessedNormal = preprocessFrame(artCrop, cfg.inputSize);
+      const preprocessedFlipped = preprocessFrame(flippedArt, cfg.inputSize);
 
       const [embNormal, embFlipped] = await Promise.all(
         [preprocessedNormal, preprocessedFlipped].map(async (pp) => {
           const out = tf.tidy(() => {
-            const inp = tf.tensor(pp, [
-              1,
-              config.inputSize,
-              config.inputSize,
-              3,
-            ]);
-            return (fallbackModel as TFModel).predict(inp) as {
+            const inp = tf.tensor(pp, [1, cfg.inputSize, cfg.inputSize, 3]);
+            return model.predict(inp) as {
               data(): Promise<Float32Array>;
               dispose(): void;
             };
@@ -422,74 +375,186 @@ export function createWorkerBridge(
         })
       );
 
-      // Compute color histograms for hybrid matching (on art crop)
       const histNormal = computeHistogram(artCrop);
       const histFlipped = computeHistogram(flippedArt);
-
-      // Compute dHash for structural matching (on art crop)
       const dhashNormal = computeDHash(artCrop);
       const dhashFlipped = computeDHash(flippedArt);
 
       const candidatesNormal = findTopCandidates(
         embNormal,
-        fallbackDb,
-        config.maxCandidates,
-        config.confidenceThreshold,
+        db,
+        cfg.maxCandidates,
+        cfg.confidenceThreshold,
         histNormal,
         detectedColor,
         dhashNormal
       );
       const candidatesFlipped = findTopCandidates(
         embFlipped,
-        fallbackDb,
-        config.maxCandidates,
-        config.confidenceThreshold,
+        db,
+        cfg.maxCandidates,
+        cfg.confidenceThreshold,
         histFlipped,
         detectedColor,
         dhashFlipped
       );
 
-      // Pick the orientation that produced the highest-confidence match
       const bestNormal = candidatesNormal[0]?.confidence ?? 0;
       const bestFlipped = candidatesFlipped[0]?.confidence ?? 0;
       const candidates =
         bestFlipped > bestNormal ? candidatesFlipped : candidatesNormal;
 
-      const durationMs = Date.now() - start;
-      const fps = recordCompletion();
+      return { candidates, detectedColor };
+    }
 
-      if (candidates.length === 0) {
-        return {
-          result: {
+    try {
+      // Step 1: Detect card-like objects with YOLOv8n
+      const detectedCards = await detectCards(imageData);
+
+      const sorted =
+        detectedCards.length > 0
+          ? [...detectedCards].sort((a, b) => b.confidence - a.confidence)
+          : [];
+
+      const maxIdentify = config.maxIdentify ?? 5;
+      const TIME_BUDGET_MS = 1500;
+      const identifiedCards: IdentifiedCard[] = [];
+      let bestOverallResult: RecognitionOutput | null = null;
+      let bestOverallCandidates: RecognitionResult[] = [];
+
+      if (sorted.length > 0) {
+        // Multi-card identification loop
+        const toProcess = sorted.slice(0, maxIdentify);
+
+        for (let i = 0; i < toProcess.length; i++) {
+          // Time budget check — break if we've exceeded the budget
+          if (i > 0 && Date.now() - start > TIME_BUDGET_MS) {
+            // Mark remaining detections as unidentified
+            for (let j = i; j < toProcess.length; j++) {
+              identifiedCards.push({
+                ...toProcess[j],
+                cardCode: null,
+                matchConfidence: 0,
+                candidates: [],
+              });
+            }
+            break;
+          }
+
+          const detection = toProcess[i];
+          const [bx, by, bw, bh] = detection.bbox;
+
+          // Shrink bbox by 10% on each edge
+          const shrinkX = bw * 0.1;
+          const shrinkY = bh * 0.1;
+          const cropped = cropFromImageData(
+            imageData,
+            Math.round(bx + shrinkX),
+            Math.round(by + shrinkY),
+            Math.round(bw - shrinkX * 2),
+            Math.round(bh - shrinkY * 2)
+          );
+
+          const { candidates, detectedColor } = await identifyCard(
+            cropped,
+            fallbackModel,
+            fallbackDb,
+            config
+          );
+
+          const durationMs = Date.now() - start;
+          const best = candidates[0] ?? null;
+
+          const identified: IdentifiedCard = {
+            ...detection,
+            cardCode: best?.cardCode ?? null,
+            matchConfidence: best?.confidence ?? 0,
+            candidates: candidates.map((c) => ({ ...c, durationMs })),
+          };
+          identifiedCards.push(identified);
+
+          // Log matches
+          if (candidates.length > 0) {
+            candidates.slice(0, 3).forEach((c, ci) => {
+              console.log(
+                `[Match] Card ${i + 1} #${ci + 1}: ${c.cardCode} (${(c.confidence * 100).toFixed(1)}%) color=${detectedColor ?? "?"}`
+              );
+            });
+          }
+
+          // Track best overall match (for backward compat lastResult/topCandidates)
+          if (
+            best &&
+            (bestOverallResult === null ||
+              best.confidence > (bestOverallResult.confidence ?? 0))
+          ) {
+            bestOverallResult = {
+              cardCode: best.cardCode,
+              confidence: best.confidence,
+              candidateCount: candidates.length,
+              durationMs,
+            };
+            bestOverallCandidates = candidates.map((c) => ({
+              ...c,
+              durationMs,
+            }));
+          }
+        }
+
+        // Any remaining detections beyond maxIdentify
+        for (let i = toProcess.length; i < sorted.length; i++) {
+          identifiedCards.push({
+            ...sorted[i],
             cardCode: null,
-            confidence: 0,
-            candidateCount: 0,
-            durationMs,
-          },
-          topCandidates: [],
-          fps,
-          detectedCards: sorted,
-        };
-      }
+            matchConfidence: 0,
+            candidates: [],
+          });
+        }
+      } else {
+        // No detections — process full frame as single card
+        const { candidates, detectedColor } = await identifyCard(
+          imageData,
+          fallbackModel,
+          fallbackDb,
+          config
+        );
 
-      const best = candidates[0];
-      return {
-        result: {
-          cardCode: best.cardCode,
-          confidence: best.confidence,
-          candidateCount: candidates.length,
-          durationMs,
-        },
-        topCandidates: candidates.map((c, i) => {
-          if (i < 5) {
+        const durationMs = Date.now() - start;
+        const best = candidates[0] ?? null;
+
+        if (best) {
+          bestOverallResult = {
+            cardCode: best.cardCode,
+            confidence: best.confidence,
+            candidateCount: candidates.length,
+            durationMs,
+          };
+          bestOverallCandidates = candidates.map((c) => ({
+            ...c,
+            durationMs,
+          }));
+          candidates.slice(0, 5).forEach((c, i) => {
             console.log(
               `[Match] #${i + 1}: ${c.cardCode} (${(c.confidence * 100).toFixed(1)}%) color=${detectedColor ?? "?"}`
             );
-          }
-          return { ...c, durationMs };
-        }),
+          });
+        }
+      }
+
+      const durationMs = Date.now() - start;
+      const fps = recordCompletion();
+
+      return {
+        result: bestOverallResult ?? {
+          cardCode: null,
+          confidence: 0,
+          candidateCount: 0,
+          durationMs,
+        },
+        topCandidates: bestOverallCandidates,
         fps,
         detectedCards: sorted,
+        identifiedCards,
       };
     } catch {
       const fps = recordCompletion();
@@ -503,6 +568,7 @@ export function createWorkerBridge(
         topCandidates: [],
         fps,
         detectedCards: [],
+        identifiedCards: [],
       };
     }
   }

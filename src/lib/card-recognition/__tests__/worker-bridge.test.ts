@@ -70,6 +70,7 @@ const DEFAULT_CONFIG = {
   inputSize: 224,
   maxCandidates: 3,
   frameSkip: 5,
+  maxIdentify: 5,
 };
 
 /** Factory that returns null — simulates no Worker support */

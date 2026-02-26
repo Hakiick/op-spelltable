@@ -97,6 +97,7 @@ describe("createCardRecognizer", () => {
       inputSize: 224,
       maxCandidates: 3,
       frameSkip: 5,
+      maxIdentify: 5,
     });
 
     expect(result.cardCode).toBeNull();
@@ -134,6 +135,7 @@ describe("createCardRecognizer", () => {
       inputSize: 224,
       maxCandidates: 3,
       frameSkip: 5,
+      maxIdentify: 5,
     });
 
     expect(result.cardCode).toBeNull();
