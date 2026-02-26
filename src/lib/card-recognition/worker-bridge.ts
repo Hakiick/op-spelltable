@@ -23,6 +23,11 @@ import { recognizeCardCode, disposeOcrWorker } from "./ocr";
 import { computeHistogram } from "./histogram";
 import { detectBorderColor } from "./color-filter";
 import { computeDHash } from "./dhash";
+import {
+  loadProjection,
+  createIdentityProjection,
+  type Projection,
+} from "./projection";
 
 const FPS_WINDOW_SIZE = 10;
 
@@ -162,6 +167,7 @@ export function createWorkerBridge(
   // Main-thread fallback state
   let fallbackModel: TFModel | null = null;
   let fallbackDb: ReferenceDatabase | null = null;
+  let fallbackProjection: Projection = createIdentityProjection();
   let fallbackReady = false;
 
   function recordCompletion(): number {
@@ -178,14 +184,16 @@ export function createWorkerBridge(
   ): Promise<void> {
     const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
     const isManifest = embeddingsUrl.endsWith("manifest.json");
-    const [loadedModel, loadedDb] = await Promise.all([
+    const [loadedModel, loadedDb, loadedProjection] = await Promise.all([
       tf.loadGraphModel(modelUrl, { fromTFHub: true }),
       isManifest
         ? loadAllReferenceDatabases(embeddingsUrl)
         : loadReferenceDatabase(embeddingsUrl),
+      loadProjection("/ml/projection-weights.json"),
     ]);
     fallbackModel = loadedModel;
     fallbackDb = loadedDb;
+    fallbackProjection = loadedProjection;
     fallbackReady = true;
 
     // Detection model is optional — don't crash the pipeline if missing
@@ -371,7 +379,8 @@ export function createWorkerBridge(
           });
           const data = await out.data();
           out.dispose();
-          return data;
+          // Apply projection head if trained weights are loaded
+          return fallbackProjection.apply(new Float32Array(data));
         })
       );
 
@@ -587,6 +596,7 @@ export function createWorkerBridge(
     disposeDetectionModel();
     void disposeOcrWorker();
     fallbackDb = null;
+    fallbackProjection = createIdentityProjection();
     fallbackReady = false;
     usingWorker = false;
     completionTimestamps.length = 0;

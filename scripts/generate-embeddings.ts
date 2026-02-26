@@ -18,6 +18,16 @@
 import fs from "fs";
 import path from "path";
 import { computeDHashFromRgb, dHashToHex } from "../src/lib/card-recognition/dhash";
+import {
+  downloadImage,
+  removeSampleWatermark,
+  addGaussianNoise,
+  adjustContrast,
+  desaturate,
+  type SharpInstance,
+  type SharpFn,
+} from "./lib/image-utils";
+import { loadProjectionFromFile, type ProjectionWeightsData } from "./lib/projection-utils";
 
 interface CardEntry {
   cardId: string;
@@ -106,171 +116,8 @@ async function generateMockDatabase(
   };
 }
 
-async function downloadImage(url: string): Promise<Buffer> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${url}`);
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
-}
-
-type SharpInstance = {
-  resize: (
-    w: number,
-    h: number,
-    opts: { fit: string; background?: { r: number; g: number; b: number } }
-  ) => SharpInstance;
-  removeAlpha: () => SharpInstance;
-  rotate: (
-    angle: number,
-    opts?: { background: { r: number; g: number; b: number; alpha: number } }
-  ) => SharpInstance;
-  modulate: (opts: {
-    brightness?: number;
-    saturation?: number;
-  }) => SharpInstance;
-  blur: (sigma?: number) => SharpInstance;
-  flop: () => SharpInstance;
-  png: () => SharpInstance;
-  extract: (opts: {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  }) => SharpInstance;
-  raw: () => { toBuffer: () => Promise<Buffer> };
-  toBuffer: () => Promise<Buffer>;
-  metadata: () => Promise<{ width?: number; height?: number }>;
-};
-type SharpFn = {
-  (input: Buffer): SharpInstance;
-  (
-    input: Buffer,
-    opts: { raw: { width: number; height: number; channels: number } }
-  ): SharpInstance;
-};
-
-/**
- * Removes the SAMPLE watermark from a raw RGB buffer by detecting bright,
- * desaturated pixels (the gray/white SAMPLE text) and replacing them with
- * the local average of nearby colored pixels. This is done BEFORE generating
- * embeddings so that reference embeddings match real (unwatermarked) cards.
- *
- * @param rgbBuffer Raw RGB buffer (3 bytes per pixel, row-major)
- * @param width Image width
- * @param height Image height
- * @returns New buffer with SAMPLE text replaced by local color averages
- */
-function removeSampleWatermark(
-  rgbBuffer: Buffer,
-  width: number,
-  height: number
-): Buffer {
-  const result = Buffer.from(rgbBuffer);
-  const pixelCount = width * height;
-
-  // Step 1: Build a mask of SAMPLE-like pixels
-  const isSample = new Uint8Array(pixelCount);
-  for (let i = 0; i < pixelCount; i++) {
-    const r = rgbBuffer[i * 3] / 255;
-    const g = rgbBuffer[i * 3 + 1] / 255;
-    const b = rgbBuffer[i * 3 + 2] / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const d = max - min;
-    const s = max === 0 ? 0 : d / max;
-    const v = max;
-
-    // SAMPLE text: bright + desaturated (gray/white overlaid on card art)
-    if (v > 0.55 && s < 0.2) {
-      isSample[i] = 1;
-    }
-  }
-
-  // Step 2: For each SAMPLE pixel, replace with average of non-SAMPLE
-  // neighbors in a 7x7 window
-  const radius = 3;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = y * width + x;
-      if (!isSample[idx]) continue;
-
-      let sumR = 0,
-        sumG = 0,
-        sumB = 0,
-        count = 0;
-      for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
-          const ni = ny * width + nx;
-          if (isSample[ni]) continue; // Skip other SAMPLE pixels
-          sumR += rgbBuffer[ni * 3];
-          sumG += rgbBuffer[ni * 3 + 1];
-          sumB += rgbBuffer[ni * 3 + 2];
-          count++;
-        }
-      }
-
-      if (count > 0) {
-        result[idx * 3] = Math.round(sumR / count);
-        result[idx * 3 + 1] = Math.round(sumG / count);
-        result[idx * 3 + 2] = Math.round(sumB / count);
-      }
-      // If no non-SAMPLE neighbors found (large SAMPLE region), leave as-is
-      // — the saturation boost will handle these residuals
-    }
-  }
-
-  return result;
-}
-
-/**
- * Adds Gaussian noise to a raw RGB buffer (in-place on a copy).
- * Simulates webcam sensor noise.
- */
-function addGaussianNoise(buffer: Buffer, sigma: number): Buffer {
-  const result = Buffer.from(buffer);
-  for (let i = 0; i < result.length; i++) {
-    // Box-Muller transform for Gaussian random
-    const u1 = Math.random() || 1e-10;
-    const u2 = Math.random();
-    const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-    result[i] = Math.max(0, Math.min(255, Math.round(result[i] + z * sigma)));
-  }
-  return result;
-}
-
-/**
- * Applies contrast jitter to a raw RGB buffer.
- * factor > 1 increases contrast, < 1 decreases.
- */
-function adjustContrast(buffer: Buffer, factor: number): Buffer {
-  const result = Buffer.from(buffer);
-  for (let i = 0; i < result.length; i++) {
-    const val = (result[i] - 128) * factor + 128;
-    result[i] = Math.max(0, Math.min(255, Math.round(val)));
-  }
-  return result;
-}
-
-/**
- * Blends RGB buffer toward grayscale by a given amount (0 = no change, 1 = full grayscale).
- * Simulates desaturated webcam under poor lighting.
- */
-function desaturate(buffer: Buffer, amount: number): Buffer {
-  const result = Buffer.from(buffer);
-  for (let i = 0; i < result.length; i += 3) {
-    const gray = 0.299 * result[i] + 0.587 * result[i + 1] + 0.114 * result[i + 2];
-    result[i] = Math.round(result[i] * (1 - amount) + gray * amount);
-    result[i + 1] = Math.round(result[i + 1] * (1 - amount) + gray * amount);
-    result[i + 2] = Math.round(result[i + 2] * (1 - amount) + gray * amount);
-  }
-  return result;
-}
+// downloadImage, removeSampleWatermark, addGaussianNoise, adjustContrast,
+// desaturate, SharpInstance, SharpFn — all imported from ./lib/image-utils
 
 /**
  * Generates augmented versions of a card image buffer for more robust embeddings.
@@ -480,9 +327,37 @@ function computeImageHistogram(rgbBuffer: Buffer, size: number): Float32Array {
   return histogram;
 }
 
+/** Apply a projection matrix to a centroid embedding and L2-normalize. */
+function applyProjectionToCentroid(
+  centroid: number[],
+  projData: ProjectionWeightsData
+): number[] {
+  const { inputDim, outputDim, weights } = projData;
+  if (centroid.length !== inputDim) return centroid;
+  const output = new Float64Array(outputDim);
+  for (let i = 0; i < inputDim; i++) {
+    const val = centroid[i];
+    if (val === 0) continue;
+    const offset = i * outputDim;
+    for (let j = 0; j < outputDim; j++) {
+      output[j] += val * weights[offset + j];
+    }
+  }
+  // L2 normalize
+  let norm = 0;
+  for (let j = 0; j < outputDim; j++) norm += output[j] * output[j];
+  norm = Math.sqrt(norm);
+  const result = new Array<number>(outputDim);
+  for (let j = 0; j < outputDim; j++) {
+    result[j] = norm > 0 ? output[j] / norm : 0;
+  }
+  return result;
+}
+
 async function generateRealDatabase(
   setCode: string,
-  cards: CardEntry[]
+  cards: CardEntry[],
+  projData: ProjectionWeightsData | null
 ): Promise<EmbeddingDatabase> {
   console.log(
     `  [real] Loading MobileNetV3 Large model for ${setCode} (${cards.length} cards, ${AUGMENT_COUNT} augmentations each)...`
@@ -607,9 +482,16 @@ async function generateRealDatabase(
       }
 
       // Average all augmented embeddings into a single centroid
+      let centroid = averageEmbeddings(augmentedEmbeddings);
+
+      // Apply projection head if trained weights are available
+      if (projData) {
+        centroid = applyProjectionToCentroid(centroid, projData);
+      }
+
       entries.push({
         cardCode: card.cardId,
-        embedding: averageEmbeddings(augmentedEmbeddings),
+        embedding: centroid,
         histogram: Array.from(histogram),
         color: card.color,
         dhash: dHashToHex(dhash),
@@ -624,10 +506,14 @@ async function generateRealDatabase(
 
   model.dispose();
 
+  const effectiveDim = projData ? projData.outputDim : EMBEDDING_DIM;
+
   return {
     version: "1.0.0",
-    model: "mobilenet_v3_large_100_224",
-    embeddingDim: EMBEDDING_DIM,
+    model: projData
+      ? "mobilenet_v3_large_100_224+projection"
+      : "mobilenet_v3_large_100_224",
+    embeddingDim: effectiveDim,
     cardCount: entries.length,
     generatedAt: new Date().toISOString(),
     entries,
@@ -636,7 +522,8 @@ async function generateRealDatabase(
 
 async function processSet(
   setCode: string,
-  mock: boolean
+  mock: boolean,
+  projData: ProjectionWeightsData | null
 ): Promise<ManifestEntry | null> {
   const jsonPath = path.join(DATA_DIR, `${setCode}.json`);
 
@@ -653,7 +540,7 @@ async function processSet(
     db = await generateMockDatabase(setCode, rawData);
   } else {
     try {
-      db = await generateRealDatabase(setCode, rawData);
+      db = await generateRealDatabase(setCode, rawData, projData);
     } catch {
       console.log(
         `  Falling back to mock embeddings for ${setCode} (use --mock to suppress this)`
@@ -681,6 +568,17 @@ async function main(): Promise<void> {
   // Ensure output directory exists
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
+  // Load projection weights if available
+  const projPath = path.resolve("public/ml/projection-weights.json");
+  const projData = mock ? null : loadProjectionFromFile(projPath);
+  if (projData) {
+    console.log(
+      `Projection weights loaded: ${projData.inputDim}→${projData.outputDim} (${projPath})`
+    );
+  } else if (!mock) {
+    console.log("No projection weights found — using raw 1280D embeddings");
+  }
+
   // Discover all available sets if none specified
   let targetSets = sets;
   if (targetSets.length === 0) {
@@ -698,7 +596,7 @@ async function main(): Promise<void> {
   const newEntries: ManifestEntry[] = [];
 
   for (const setCode of targetSets) {
-    const entry = await processSet(setCode, mock);
+    const entry = await processSet(setCode, mock, projData);
     if (entry) {
       newEntries.push(entry);
     }
