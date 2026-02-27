@@ -79,5 +79,7 @@ datasets/
 # YOLO training runs
 runs/
 
-# Python venv for model export
+# Python venvs
+.venv/
 .yolo-venv/
+__pycache__/

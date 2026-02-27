@@ -52,17 +52,12 @@ vi.mock("../detection", () => ({
   disposeDetectionModel: vi.fn(),
 }));
 
-// Mock TensorFlow.js
-vi.mock("@tensorflow/tfjs", () => ({
-  loadGraphModel: vi.fn().mockResolvedValue({
-    predict: vi.fn().mockReturnValue({
-      data: vi.fn().mockResolvedValue(new Float32Array(576)),
-      dispose: vi.fn(),
-    }),
+// Mock ONNX model
+vi.mock("../onnx-model", () => ({
+  loadOnnxModel: vi.fn().mockResolvedValue({
+    run: vi.fn().mockResolvedValue(new Float32Array(1280)),
     dispose: vi.fn(),
   }),
-  tensor: vi.fn().mockReturnValue({}),
-  tidy: vi.fn((fn: () => unknown) => fn()),
 }));
 
 const DEFAULT_CONFIG = {

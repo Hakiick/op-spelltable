@@ -1,16 +1,20 @@
+/** ImageNet normalization constants */
+const IMAGENET_MEAN = [0.485, 0.456, 0.406];
+const IMAGENET_STD = [0.229, 0.224, 0.225];
+
 /**
- * Normalizes a pixel value from [0, 255] to [-1, 1].
- * Formula: pixel / 127.5 - 1
+ * Normalizes a pixel value using ImageNet statistics.
+ * Formula: (pixel / 255 - mean) / std
  *
  * Exported for testing purposes.
  */
-export function normalizePixel(pixelValue: number): number {
-  return pixelValue / 127.5 - 1;
+export function normalizePixel(pixelValue: number, channel: number = 0): number {
+  return (pixelValue / 255 - IMAGENET_MEAN[channel]) / IMAGENET_STD[channel];
 }
 
 /**
  * Converts raw RGBA pixel data (Uint8ClampedArray) to a normalized Float32Array.
- * Output format: [R, G, B, R, G, B, ...] with values in [-1, 1].
+ * Output format: NCHW — [R...R, G...G, B...B] with ImageNet normalization.
  * Alpha channel is dropped.
  *
  * Exported for testing purposes.
@@ -22,10 +26,9 @@ export function rgbaToNormalizedRgb(
   const result = new Float32Array(pixelCount * 3);
   for (let i = 0; i < pixelCount; i++) {
     const srcIdx = i * 4;
-    const dstIdx = i * 3;
-    result[dstIdx] = normalizePixel(pixels[srcIdx]); // R
-    result[dstIdx + 1] = normalizePixel(pixels[srcIdx + 1]); // G
-    result[dstIdx + 2] = normalizePixel(pixels[srcIdx + 2]); // B
+    result[i] = normalizePixel(pixels[srcIdx], 0); // R plane
+    result[pixelCount + i] = normalizePixel(pixels[srcIdx + 1], 1); // G plane
+    result[2 * pixelCount + i] = normalizePixel(pixels[srcIdx + 2], 2); // B plane
   }
   return result;
 }
@@ -66,10 +69,10 @@ function createCanvas(
  *
  * Uses **letterbox** resizing: pads the input to a square (with gray=128)
  * while preserving aspect ratio, then resizes to inputSize x inputSize.
- * This matches the preprocessing used in generate-embeddings.ts (sharp
- * `fit: 'contain'` with gray background) so that embeddings are comparable.
+ * This matches the preprocessing used in generate_embeddings.py (PIL
+ * letterbox with gray background) so that embeddings are comparable.
  *
- * Uses a pure canvas approach — NO TensorFlow.js dependency.
+ * Output is NCHW layout with ImageNet normalization for ONNX Runtime Web.
  */
 export function preprocessFrame(
   imageData: ImageData,
@@ -113,7 +116,7 @@ export function preprocessFrame(
     scaledH
   );
 
-  // Step 4: Extract pixels and normalize to [-1, 1]
+  // Step 4: Extract pixels and normalize (ImageNet, NCHW layout)
   const resized = targetCtx.getImageData(0, 0, inputSize, inputSize);
   return rgbaToNormalizedRgb(resized.data, inputSize * inputSize);
 }

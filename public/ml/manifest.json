@@ -45,197 +45,198 @@
     {
       "setCode": "OP06",
       "embeddingsUrl": "/ml/embeddings-OP06.json",
-      "cardCount": 126
+      "cardCount": 17
     },
     {
       "setCode": "OP07",
       "embeddingsUrl": "/ml/embeddings-OP07.json",
-      "cardCount": 126
+      "cardCount": 0
     },
     {
       "setCode": "OP08",
       "embeddingsUrl": "/ml/embeddings-OP08.json",
-      "cardCount": 126
+      "cardCount": 0
     },
     {
       "setCode": "OP09",
       "embeddingsUrl": "/ml/embeddings-OP09.json",
-      "cardCount": 127
+      "cardCount": 0
     },
     {
       "setCode": "OP10",
       "embeddingsUrl": "/ml/embeddings-OP10.json",
-      "cardCount": 126
+      "cardCount": 0
     },
     {
       "setCode": "OP11",
       "embeddingsUrl": "/ml/embeddings-OP11.json",
-      "cardCount": 127
+      "cardCount": 0
     },
     {
       "setCode": "OP12",
       "embeddingsUrl": "/ml/embeddings-OP12.json",
-      "cardCount": 127
+      "cardCount": 0
     },
     {
       "setCode": "OP13",
       "embeddingsUrl": "/ml/embeddings-OP13.json",
-      "cardCount": 129
+      "cardCount": 0
     },
     {
       "setCode": "OP14-EB04",
       "embeddingsUrl": "/ml/embeddings-OP14-EB04.json",
-      "cardCount": 160
+      "cardCount": 0
     },
     {
       "setCode": "PRB01",
       "embeddingsUrl": "/ml/embeddings-PRB01.json",
-      "cardCount": 56
+      "cardCount": 0
     },
     {
       "setCode": "PRB02",
       "embeddingsUrl": "/ml/embeddings-PRB02.json",
-      "cardCount": 58
+      "cardCount": 0
     },
     {
       "setCode": "ST01",
       "embeddingsUrl": "/ml/embeddings-ST01.json",
-      "cardCount": 17
+      "cardCount": 0
     },
     {
       "setCode": "ST02",
       "embeddingsUrl": "/ml/embeddings-ST02.json",
-      "cardCount": 17
+      "cardCount": 0
     },
     {
       "setCode": "ST03",
       "embeddingsUrl": "/ml/embeddings-ST03.json",
-      "cardCount": 17
+      "cardCount": 0
     },
     {
       "setCode": "ST04",
       "embeddingsUrl": "/ml/embeddings-ST04.json",
-      "cardCount": 17
+      "cardCount": 0
     },
     {
       "setCode": "ST05",
       "embeddingsUrl": "/ml/embeddings-ST05.json",
-      "cardCount": 17
+      "cardCount": 0
     },
     {
       "setCode": "ST06",
       "embeddingsUrl": "/ml/embeddings-ST06.json",
-      "cardCount": 17
+      "cardCount": 0
     },
     {
       "setCode": "ST07",
       "embeddingsUrl": "/ml/embeddings-ST07.json",
-      "cardCount": 17
+      "cardCount": 0
     },
     {
       "setCode": "ST08",
       "embeddingsUrl": "/ml/embeddings-ST08.json",
-      "cardCount": 15
+      "cardCount": 0
     },
     {
       "setCode": "ST09",
       "embeddingsUrl": "/ml/embeddings-ST09.json",
-      "cardCount": 15
+      "cardCount": 0
     },
     {
       "setCode": "ST10",
       "embeddingsUrl": "/ml/embeddings-ST10.json",
-      "cardCount": 17
+      "cardCount": 0
     },
     {
       "setCode": "ST11",
       "embeddingsUrl": "/ml/embeddings-ST11.json",
-      "cardCount": 5
+      "cardCount": 0
     },
     {
       "setCode": "ST12",
       "embeddingsUrl": "/ml/embeddings-ST12.json",
-      "cardCount": 17
+      "cardCount": 0
     },
     {
       "setCode": "ST13",
       "embeddingsUrl": "/ml/embeddings-ST13.json",
-      "cardCount": 19
+      "cardCount": 0
     },
     {
       "setCode": "ST14",
       "embeddingsUrl": "/ml/embeddings-ST14.json",
-      "cardCount": 12
+      "cardCount": 0
     },
     {
       "setCode": "ST15",
       "embeddingsUrl": "/ml/embeddings-ST15.json",
-      "cardCount": 13
+      "cardCount": 0
     },
     {
       "setCode": "ST16",
       "embeddingsUrl": "/ml/embeddings-ST16.json",
-      "cardCount": 15
+      "cardCount": 0
     },
     {
       "setCode": "ST17",
       "embeddingsUrl": "/ml/embeddings-ST17.json",
-      "cardCount": 10
+      "cardCount": 0
     },
     {
       "setCode": "ST18",
       "embeddingsUrl": "/ml/embeddings-ST18.json",
-      "cardCount": 15
+      "cardCount": 0
     },
     {
       "setCode": "ST19",
       "embeddingsUrl": "/ml/embeddings-ST19.json",
-      "cardCount": 14
+      "cardCount": 0
     },
     {
       "setCode": "ST20",
       "embeddingsUrl": "/ml/embeddings-ST20.json",
-      "cardCount": 11
+      "cardCount": 0
     },
     {
       "setCode": "ST21",
       "embeddingsUrl": "/ml/embeddings-ST21.json",
-      "cardCount": 17
+      "cardCount": 0
     },
     {
       "setCode": "ST22",
       "embeddingsUrl": "/ml/embeddings-ST22.json",
-      "cardCount": 17
+      "cardCount": 0
     },
     {
       "setCode": "ST23",
       "embeddingsUrl": "/ml/embeddings-ST23.json",
-      "cardCount": 15
+      "cardCount": 0
     },
     {
       "setCode": "ST24",
       "embeddingsUrl": "/ml/embeddings-ST24.json",
-      "cardCount": 15
+      "cardCount": 0
     },
     {
       "setCode": "ST25",
       "embeddingsUrl": "/ml/embeddings-ST25.json",
-      "cardCount": 14
+      "cardCount": 0
     },
     {
       "setCode": "ST26",
       "embeddingsUrl": "/ml/embeddings-ST26.json",
-      "cardCount": 15
+      "cardCount": 0
     },
     {
       "setCode": "ST27",
       "embeddingsUrl": "/ml/embeddings-ST27.json",
-      "cardCount": 15
+      "cardCount": 0
     },
     {
       "setCode": "ST28",
       "embeddingsUrl": "/ml/embeddings-ST28.json",
-      "cardCount": 15
+      "cardCount": 0
     }
-  ]
+  ],
+  "generatedAt": "2026-02-27T12:35:52.210786Z"
 }

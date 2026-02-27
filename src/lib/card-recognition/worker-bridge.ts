@@ -23,6 +23,7 @@ import { recognizeCardCode, disposeOcrWorker } from "./ocr";
 import { computeHistogram } from "./histogram";
 import { detectBorderColor } from "./color-filter";
 import { computeDHash } from "./dhash";
+import { loadOnnxModel, type OnnxFeatureModel } from "./onnx-model";
 
 const FPS_WINDOW_SIZE = 10;
 
@@ -109,19 +110,7 @@ function computeFpsFromTimestamps(timestamps: number[]): number {
   return ((timestamps.length - 1) / elapsed) * 1000;
 }
 
-interface TFModel {
-  predict(input: unknown): { data(): Promise<Float32Array>; dispose(): void };
-  dispose(): void;
-}
-
-interface TFLib {
-  loadGraphModel(
-    url: string,
-    options?: { fromTFHub?: boolean }
-  ): Promise<TFModel>;
-  tensor(data: Float32Array, shape: number[]): unknown;
-  tidy<T>(fn: () => T): T;
-}
+// TFModel/TFLib interfaces removed — now using OnnxFeatureModel from onnx-model.ts
 
 /**
  * Default worker factory that creates a recognition Web Worker.
@@ -160,7 +149,7 @@ export function createWorkerBridge(
   const completionTimestamps: number[] = [];
 
   // Main-thread fallback state
-  let fallbackModel: TFModel | null = null;
+  let fallbackModel: OnnxFeatureModel | null = null;
   let fallbackDb: ReferenceDatabase | null = null;
   let fallbackReady = false;
 
@@ -176,10 +165,9 @@ export function createWorkerBridge(
     modelUrl: string,
     embeddingsUrl: string
   ): Promise<void> {
-    const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
     const isManifest = embeddingsUrl.endsWith("manifest.json");
     const [loadedModel, loadedDb] = await Promise.all([
-      tf.loadGraphModel(modelUrl, { fromTFHub: true }),
+      loadOnnxModel(modelUrl),
       isManifest
         ? loadAllReferenceDatabases(embeddingsUrl)
         : loadReferenceDatabase(embeddingsUrl),
@@ -332,7 +320,7 @@ export function createWorkerBridge(
     /** Identify a single cropped card image via MobileNetV3 embedding matching. */
     async function identifyCard(
       croppedInput: ImageData,
-      model: TFModel,
+      model: OnnxFeatureModel,
       db: ReferenceDatabase,
       cfg: RecognitionConfig
     ): Promise<{
@@ -354,25 +342,15 @@ export function createWorkerBridge(
         artHeight
       );
 
-      const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
       const flippedArt = flipImageDataHorizontally(artCrop);
 
       const preprocessedNormal = preprocessFrame(artCrop, cfg.inputSize);
       const preprocessedFlipped = preprocessFrame(flippedArt, cfg.inputSize);
 
       const [embNormal, embFlipped] = await Promise.all(
-        [preprocessedNormal, preprocessedFlipped].map(async (pp) => {
-          const out = tf.tidy(() => {
-            const inp = tf.tensor(pp, [1, cfg.inputSize, cfg.inputSize, 3]);
-            return model.predict(inp) as {
-              data(): Promise<Float32Array>;
-              dispose(): void;
-            };
-          });
-          const data = await out.data();
-          out.dispose();
-          return data;
-        })
+        [preprocessedNormal, preprocessedFlipped].map((pp) =>
+          model.run(pp, cfg.inputSize)
+        )
       );
 
       const histNormal = computeHistogram(artCrop);

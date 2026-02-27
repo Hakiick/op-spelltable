@@ -9,13 +9,16 @@
     "lint": "eslint src/",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "ml:setup": "python3 -m venv .venv && .venv/bin/pip install -r requirements.txt",
+    "generate-embeddings": ".venv/bin/python scripts/generate_embeddings.py",
+    "generate-embeddings:gpu": ".venv/bin/python scripts/generate_embeddings.py --gpu",
+    "export-onnx": ".venv/bin/python scripts/export_onnx.py"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
     "@prisma/adapter-better-sqlite3": "^7.4.1",
     "@prisma/client": "^7.4.1",
-    "@tensorflow/tfjs": "^4.22.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",

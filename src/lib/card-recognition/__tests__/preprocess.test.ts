@@ -37,23 +37,31 @@ Object.defineProperty(globalThis, "ImageData", {
 // ─── Pure math tests (no DOM needed) ──────────────────────────────────────────
 
 describe("normalizePixel", () => {
-  it("normalizes 0 to -1.0", () => {
-    expect(normalizePixel(0)).toBeCloseTo(-1.0, 5);
+  it("normalizes 0 using ImageNet stats for R channel", () => {
+    // (0/255 - 0.485) / 0.229 ≈ -2.118
+    expect(normalizePixel(0, 0)).toBeCloseTo(-0.485 / 0.229, 3);
   });
 
-  it("normalizes 255 to approximately 1.0", () => {
-    expect(normalizePixel(255)).toBeCloseTo(255 / 127.5 - 1, 4);
+  it("normalizes 255 using ImageNet stats for R channel", () => {
+    // (1.0 - 0.485) / 0.229 ≈ 2.249
+    expect(normalizePixel(255, 0)).toBeCloseTo((1.0 - 0.485) / 0.229, 3);
   });
 
-  it("normalizes 127 to approximately 0", () => {
-    expect(normalizePixel(127)).toBeCloseTo(127 / 127.5 - 1, 4);
+  it("applies different stats per channel", () => {
+    const rNorm = normalizePixel(128, 0);
+    const gNorm = normalizePixel(128, 1);
+    const bNorm = normalizePixel(128, 2);
+    // Different channels should produce different normalized values
+    expect(rNorm).not.toBeCloseTo(gNorm, 2);
+    expect(gNorm).not.toBeCloseTo(bNorm, 2);
   });
 
-  it("all byte values normalize to [-1, ~1] range", () => {
+  it("all byte values produce finite numbers", () => {
     for (let v = 0; v <= 255; v++) {
-      const normalized = normalizePixel(v);
-      expect(normalized).toBeGreaterThanOrEqual(-1.0);
-      expect(normalized).toBeLessThanOrEqual(1.01); // 255/127.5 - 1 ≈ 1.004
+      for (let ch = 0; ch < 3; ch++) {
+        const normalized = normalizePixel(v, ch);
+        expect(Number.isFinite(normalized)).toBe(true);
+      }
     }
   });
 });
@@ -72,15 +80,30 @@ describe("rgbaToNormalizedRgb", () => {
     expect(result.length).toBe(pixelCount * 3);
   });
 
-  it("correctly maps R, G, B channels", () => {
+  it("correctly maps R, G, B channels in NCHW layout", () => {
     // Single pixel: R=200, G=100, B=50, A=255
     const pixels = new Uint8ClampedArray([200, 100, 50, 255]);
     const result = rgbaToNormalizedRgb(pixels, 1);
 
-    expect(result[0]).toBeCloseTo(normalizePixel(200), 5); // R
-    expect(result[1]).toBeCloseTo(normalizePixel(100), 5); // G
-    expect(result[2]).toBeCloseTo(normalizePixel(50), 5); // B
+    // NCHW: result[0] = R plane, result[1] = G plane, result[2] = B plane
+    expect(result[0]).toBeCloseTo(normalizePixel(200, 0), 5); // R
+    expect(result[1]).toBeCloseTo(normalizePixel(100, 1), 5); // G
+    expect(result[2]).toBeCloseTo(normalizePixel(50, 2), 5); // B
     expect(result.length).toBe(3); // no alpha
+  });
+
+  it("NCHW layout groups channels contiguously for multiple pixels", () => {
+    // 2 pixels: [R1,G1,B1,A1, R2,G2,B2,A2]
+    const pixels = new Uint8ClampedArray([200, 100, 50, 255, 150, 75, 25, 255]);
+    const result = rgbaToNormalizedRgb(pixels, 2);
+
+    // NCHW with 2 pixels: [R1, R2, G1, G2, B1, B2]
+    expect(result[0]).toBeCloseTo(normalizePixel(200, 0), 5); // R1
+    expect(result[1]).toBeCloseTo(normalizePixel(150, 0), 5); // R2
+    expect(result[2]).toBeCloseTo(normalizePixel(100, 1), 5); // G1
+    expect(result[3]).toBeCloseTo(normalizePixel(75, 1), 5); // G2
+    expect(result[4]).toBeCloseTo(normalizePixel(50, 2), 5); // B1
+    expect(result[5]).toBeCloseTo(normalizePixel(25, 2), 5); // B2
   });
 
   it("ignores alpha channel", () => {
@@ -232,7 +255,7 @@ describe("preprocessFrame", () => {
     );
   });
 
-  it("produces normalized values in range [-1, ~1]", () => {
+  it("produces finite normalized values (ImageNet normalization)", () => {
     const inputSize = 4;
     const data = new Uint8ClampedArray(inputSize * inputSize * 4);
     for (let i = 0; i < inputSize * inputSize; i++) {
@@ -254,8 +277,7 @@ describe("preprocessFrame", () => {
     const result = preprocessFrame(imageData, inputSize);
 
     for (let i = 0; i < result.length; i++) {
-      expect(result[i]).toBeGreaterThanOrEqual(-1.0);
-      expect(result[i]).toBeLessThanOrEqual(1.01);
+      expect(Number.isFinite(result[i])).toBe(true);
     }
   });
 });

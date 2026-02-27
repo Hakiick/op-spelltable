@@ -1,8 +1,6 @@
 // Web Worker for ML card recognition inference
 // Handles "init", "recognize", and "dispose" messages from the main thread.
-// Uses the existing recognizer pipeline (preprocess + reference-db).
-// Note: TensorFlow.js is not guaranteed to work in all Worker environments,
-// so this worker is loaded via the WorkerBridge which falls back to main thread.
+// Uses ONNX Runtime Web for MobileNetV3 inference (NCHW, ImageNet normalization).
 
 import type { WorkerMessage, WorkerResponse } from "@/types/ml";
 import { preprocessFrame } from "./preprocess";
@@ -12,23 +10,9 @@ import {
   findTopCandidates,
   type ReferenceDatabase,
 } from "./reference-db";
+import { loadOnnxModel, type OnnxFeatureModel } from "./onnx-model";
 
-interface TFModel {
-  predict(input: unknown): { data(): Promise<Float32Array>; dispose(): void };
-  dispose(): void;
-}
-
-interface TFLib {
-  loadGraphModel(
-    url: string,
-    options?: { fromTFHub?: boolean }
-  ): Promise<TFModel>;
-  tensor(data: Float32Array, shape: number[]): unknown;
-  tidy<T>(fn: () => T): T;
-  dispose(tensor: unknown): void;
-}
-
-let model: TFModel | null = null;
+let model: OnnxFeatureModel | null = null;
 let referenceDb: ReferenceDatabase | null = null;
 let ready = false;
 
@@ -57,10 +41,9 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>): Promise<void> => {
 
   if (msg.type === "init") {
     try {
-      const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
       const isManifest = msg.embeddingsUrl.endsWith("manifest.json");
       const [loadedModel, loadedDb] = await Promise.all([
-        tf.loadGraphModel(msg.modelUrl, { fromTFHub: true }),
+        loadOnnxModel(msg.modelUrl),
         isManifest
           ? loadAllReferenceDatabases(msg.embeddingsUrl)
           : loadReferenceDatabase(msg.embeddingsUrl),
@@ -103,23 +86,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>): Promise<void> => {
 
     try {
       const preprocessed = preprocessFrame(imageData, config.inputSize);
-      const tf = (await import("@tensorflow/tfjs")) as unknown as TFLib;
-
-      const outputTensor = tf.tidy(() => {
-        const inputTensor = tf.tensor(preprocessed, [
-          1,
-          config.inputSize,
-          config.inputSize,
-          3,
-        ]);
-        return (model as TFModel).predict(inputTensor) as {
-          data(): Promise<Float32Array>;
-          dispose(): void;
-        };
-      });
-
-      const embedding = await outputTensor.data();
-      outputTensor.dispose();
+      const embedding = await model.run(preprocessed, config.inputSize);
 
       const candidates = findTopCandidates(
         embedding,

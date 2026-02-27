@@ -1,12 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createCardRecognizer } from "../identify";
 
-// Mock TensorFlow.js to avoid real model loading in tests
-vi.mock("@tensorflow/tfjs", () => ({
-  loadGraphModel: vi.fn(),
-  tensor: vi.fn(),
-  tidy: vi.fn(),
-  dispose: vi.fn(),
+// Mock ONNX model to avoid real model loading in tests
+vi.mock("../onnx-model", () => ({
+  loadOnnxModel: vi.fn(),
 }));
 
 // Mock the reference-db module
@@ -53,28 +50,21 @@ describe("createCardRecognizer", () => {
   });
 
   it("dispose sets isReady to false", async () => {
-    const mockEmbedding = new Float32Array([0.1, 0.2, 0.3]);
-    const mockOutputTensor = {
-      data: vi.fn().mockResolvedValue(mockEmbedding),
-      dispose: vi.fn(),
-    };
     const mockModel = {
-      predict: vi.fn().mockReturnValue(mockOutputTensor),
+      run: vi.fn().mockResolvedValue(new Float32Array(1280)),
       dispose: vi.fn(),
     };
     const mockDb = {
       embeddings: [],
       cardCount: 0,
-      embeddingDim: 3,
+      embeddingDim: 1280,
       model: "test",
     };
 
-    const { loadGraphModel } = await import("@tensorflow/tfjs");
+    const { loadOnnxModel } = await import("../onnx-model");
     const { loadReferenceDatabase } = await import("../reference-db");
 
-    vi.mocked(loadGraphModel).mockResolvedValue(
-      mockModel as unknown as Awaited<ReturnType<typeof loadGraphModel>>
-    );
+    vi.mocked(loadOnnxModel).mockResolvedValue(mockModel);
     vi.mocked(loadReferenceDatabase).mockResolvedValue(
       mockDb as unknown as Awaited<ReturnType<typeof loadReferenceDatabase>>
     );
@@ -108,19 +98,20 @@ describe("createCardRecognizer", () => {
   it("recognize returns no-match when captureFrame returns null", async () => {
     const { captureFrame } = await import("../capture");
     const { loadReferenceDatabase } = await import("../reference-db");
-    const { loadGraphModel } = await import("@tensorflow/tfjs");
+    const { loadOnnxModel } = await import("../onnx-model");
 
-    const mockModel = { predict: vi.fn(), dispose: vi.fn() };
+    const mockModel = {
+      run: vi.fn().mockResolvedValue(new Float32Array(1280)),
+      dispose: vi.fn(),
+    };
     const mockDb = {
       embeddings: [],
       cardCount: 0,
-      embeddingDim: 3,
+      embeddingDim: 1280,
       model: "test",
     };
 
-    vi.mocked(loadGraphModel).mockResolvedValue(
-      mockModel as unknown as Awaited<ReturnType<typeof loadGraphModel>>
-    );
+    vi.mocked(loadOnnxModel).mockResolvedValue(mockModel);
     vi.mocked(loadReferenceDatabase).mockResolvedValue(
       mockDb as unknown as Awaited<ReturnType<typeof loadReferenceDatabase>>
     );
@@ -143,20 +134,21 @@ describe("createCardRecognizer", () => {
   });
 
   it("sets isReady=true after successful initialize", async () => {
-    const { loadGraphModel } = await import("@tensorflow/tfjs");
+    const { loadOnnxModel } = await import("../onnx-model");
     const { loadReferenceDatabase } = await import("../reference-db");
 
-    const mockModel = { predict: vi.fn(), dispose: vi.fn() };
+    const mockModel = {
+      run: vi.fn().mockResolvedValue(new Float32Array(1280)),
+      dispose: vi.fn(),
+    };
     const mockDb = {
       embeddings: [],
       cardCount: 0,
-      embeddingDim: 3,
+      embeddingDim: 1280,
       model: "test",
     };
 
-    vi.mocked(loadGraphModel).mockResolvedValue(
-      mockModel as unknown as Awaited<ReturnType<typeof loadGraphModel>>
-    );
+    vi.mocked(loadOnnxModel).mockResolvedValue(mockModel);
     vi.mocked(loadReferenceDatabase).mockResolvedValue(
       mockDb as unknown as Awaited<ReturnType<typeof loadReferenceDatabase>>
     );
