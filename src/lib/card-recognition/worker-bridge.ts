@@ -114,20 +114,15 @@ function computeFpsFromTimestamps(timestamps: number[]): number {
 
 /**
  * Default worker factory that creates a recognition Web Worker.
- * Uses `new URL(...)` which works with Next.js's bundler.
- * Returns null if Workers are unavailable or if the worker fails to load.
+ *
+ * Currently returns null to force main-thread fallback, which includes
+ * the full pipeline: YOLO detection → art crop → flip → multi-signal
+ * scoring (embedding + histogram + spatial color + color filtering).
+ * The Worker only supports embedding-only matching and needs to be
+ * enhanced with the full pipeline before re-enabling.
  */
 export function createDefaultWorkerFactory(): WorkerFactory {
-  return (): Worker | null => {
-    if (typeof Worker === "undefined") return null;
-    try {
-      return new Worker(new URL("./recognition.worker.ts", import.meta.url), {
-        type: "module",
-      });
-    } catch {
-      return null;
-    }
-  };
+  return (): Worker | null => null;
 }
 
 /**
