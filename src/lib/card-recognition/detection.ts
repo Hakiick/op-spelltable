@@ -92,8 +92,18 @@ export async function initDetectionModel(
   const ort = (await import("onnxruntime-web")) as unknown as OrtModule;
   ortRef = ort;
 
-  ort.env.wasm.wasmPaths =
-    "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.2/dist/";
+  // Serve WASM files locally for faster loading (no CDN round-trip).
+  // Files are copied from node_modules/onnxruntime-web/dist/ to public/ml/wasm/.
+  let wasmBase = "/ml/wasm/";
+  try {
+    const origin = new URL(modelUrl).origin;
+    if (origin && origin !== "null") {
+      wasmBase = origin + "/ml/wasm/";
+    }
+  } catch {
+    // modelUrl is relative — main thread, relative path is fine
+  }
+  ort.env.wasm.wasmPaths = wasmBase;
   ort.env.wasm.numThreads = 1;
 
   session = await ort.InferenceSession.create(modelUrl, {

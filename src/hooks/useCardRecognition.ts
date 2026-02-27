@@ -90,6 +90,7 @@ export function useCardRecognition(
 
     const bridge = getBridge();
 
+    console.log("[Recognition] Initializing ML pipeline...");
     setState((prev) => ({ ...prev, status: "loading", loadingProgress: 0 }));
 
     try {
@@ -99,6 +100,9 @@ export function useCardRecognition(
       );
       setIsUsingWorker(bridge.isUsingWorker());
       initializedRef.current = true;
+      console.log(
+        `[Recognition] Initialized (${bridge.isUsingWorker() ? "Worker" : "Main thread"})`
+      );
       setState((prev) => ({
         ...prev,
         status: "ready",
@@ -109,6 +113,7 @@ export function useCardRecognition(
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to initialize ML pipeline";
+      console.error("[Recognition] Init failed:", message);
       setState((prev) => ({
         ...prev,
         status: "error",
@@ -131,9 +136,48 @@ export function useCardRecognition(
 
       const video = videoRef.current;
       if (!video) {
+        console.warn("[Recognition] No video element found");
         isActiveRef.current = false;
         setState((prev) => ({ ...prev, isActive: false, status: "ready" }));
         return;
+      }
+
+      // Wait for the video to have decoded frames before starting the loop.
+      // Without this, captureFrame() returns null on every call and the loop
+      // runs silently without ever producing results.
+      if (video.readyState < 2) {
+        console.log(
+          "[Recognition] Waiting for video readiness (readyState=%d)...",
+          video.readyState
+        );
+        await new Promise<void>((resolve) => {
+          const onReady = () => {
+            video.removeEventListener("loadeddata", onReady);
+            resolve();
+          };
+          video.addEventListener("loadeddata", onReady);
+          // Safety timeout — don't hang forever if video never becomes ready
+          setTimeout(() => {
+            video.removeEventListener("loadeddata", onReady);
+            resolve();
+          }, 5000);
+        });
+      }
+
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.warn(
+          "[Recognition] Video has zero dimensions (%dx%d), readyState=%d",
+          video.videoWidth,
+          video.videoHeight,
+          video.readyState
+        );
+      } else {
+        console.log(
+          "[Recognition] Video ready: %dx%d, readyState=%d",
+          video.videoWidth,
+          video.videoHeight,
+          video.readyState
+        );
       }
 
       isActiveRef.current = true;

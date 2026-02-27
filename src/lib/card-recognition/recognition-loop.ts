@@ -69,6 +69,9 @@ export function createRecognitionLoop(): RecognitionLoop {
     // allocations and GC pressure (especially noticeable on mobile).
     const reusableCanvas = document.createElement("canvas");
 
+    let loggedFirstCapture = false;
+    let nullCaptureCount = 0;
+
     const loop = (): void => {
       if (!running) return;
 
@@ -77,8 +80,27 @@ export function createRecognitionLoop(): RecognitionLoop {
       if (frameCount % config.frameSkip === 0) {
         const capture = captureFrame(video, crop, reusableCanvas);
         if (capture) {
+          if (!loggedFirstCapture) {
+            console.log(
+              "[RecognitionLoop] First frame captured: %dx%d",
+              capture.sourceWidth,
+              capture.sourceHeight
+            );
+            loggedFirstCapture = true;
+          }
           callbacks.onFrame(capture.imageData);
           recordCompletion(callbacks);
+        } else {
+          nullCaptureCount++;
+          if (nullCaptureCount <= 3 || nullCaptureCount % 100 === 0) {
+            console.warn(
+              "[RecognitionLoop] captureFrame returned null (count=%d, video.readyState=%d, %dx%d)",
+              nullCaptureCount,
+              video.readyState,
+              video.videoWidth,
+              video.videoHeight
+            );
+          }
         }
       }
 

@@ -166,6 +166,8 @@ export function createWorkerBridge(
     embeddingsUrl: string
   ): Promise<void> {
     const isManifest = embeddingsUrl.endsWith("manifest.json");
+    console.log("[WorkerBridge] Loading ONNX model + embeddings...");
+    const t0 = Date.now();
     const [loadedModel, loadedDb] = await Promise.all([
       loadOnnxModel(modelUrl),
       isManifest
@@ -175,13 +177,19 @@ export function createWorkerBridge(
     fallbackModel = loadedModel;
     fallbackDb = loadedDb;
     fallbackReady = true;
+    console.log(
+      "[WorkerBridge] Model + embeddings loaded in %dms (%d cards)",
+      Date.now() - t0,
+      loadedDb.cardCount
+    );
 
     // Detection model is optional — don't crash the pipeline if missing
     try {
+      console.log("[WorkerBridge] Loading YOLO detection model...");
       await initDetectionModel();
+      console.log("[WorkerBridge] YOLO model loaded");
     } catch {
-      // YOLOv8n ONNX model not available — detection disabled,
-      // recognition will process the full frame instead
+      console.warn("[WorkerBridge] YOLO model not available — detection disabled");
     }
   }
 
@@ -192,8 +200,18 @@ export function createWorkerBridge(
     const w = workerFactory();
 
     if (w) {
+      console.log("[WorkerBridge] Worker created, sending init...");
+
+      // Workers created by bundlers (Turbopack/webpack) may have an opaque
+      // origin (blob: URL), which means relative paths like "/ml/model.onnx"
+      // cannot be resolved by fetch().  Convert to absolute URLs here.
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const toAbsolute = (url: string): string =>
+        url.startsWith("/") ? origin + url : url;
+
       const workerSuccess = await new Promise<boolean>((resolve) => {
         const timeout = setTimeout(() => {
+          console.warn("[WorkerBridge] Worker init timed out (30s), falling back to main thread");
           w.terminate();
           resolve(false);
         }, 30000);
@@ -201,38 +219,45 @@ export function createWorkerBridge(
         w.onmessage = (event: MessageEvent<WorkerResponse>) => {
           clearTimeout(timeout);
           if (event.data.type === "initialized") {
+            console.log("[WorkerBridge] Worker initialized successfully");
             worker = w;
             usingWorker = true;
             resolve(true);
           } else {
+            console.warn("[WorkerBridge] Worker init failed:", event.data);
             w.terminate();
             resolve(false);
           }
         };
 
-        w.onerror = () => {
+        w.onerror = (e) => {
           clearTimeout(timeout);
+          console.warn("[WorkerBridge] Worker error:", e);
           w.terminate();
           resolve(false);
         };
 
         const msg: WorkerMessage = {
           type: "init",
-          modelUrl,
-          embeddingsUrl,
+          modelUrl: toAbsolute(modelUrl),
+          embeddingsUrl: toAbsolute(embeddingsUrl),
         };
         w.postMessage(msg);
       });
 
       if (!workerSuccess) {
         // Fall back to main thread
+        console.log("[WorkerBridge] Falling back to main thread...");
         usingWorker = false;
         await initializeFallback(modelUrl, embeddingsUrl);
+        console.log("[WorkerBridge] Main thread fallback ready");
       }
     } else {
       // No Worker support — use main thread
+      console.log("[WorkerBridge] No Worker support, using main thread");
       usingWorker = false;
       await initializeFallback(modelUrl, embeddingsUrl);
+      console.log("[WorkerBridge] Main thread init complete");
     }
   }
 
@@ -388,6 +413,12 @@ export function createWorkerBridge(
     try {
       // Step 1: Detect card-like objects with YOLOv8n
       const detectedCards = await detectCards(imageData);
+      console.log(
+        "[Recognize] YOLO detected %d cards in %dx%d frame",
+        detectedCards.length,
+        imageData.width,
+        imageData.height
+      );
 
       const sorted =
         detectedCards.length > 0

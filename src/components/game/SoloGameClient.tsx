@@ -45,8 +45,12 @@ export default function SoloGameClient({
 
   // Pipe camera stream into the hidden video element for card recognition
   useEffect(() => {
-    if (videoRef.current && camera.stream) {
-      videoRef.current.srcObject = camera.stream;
+    const video = videoRef.current;
+    if (video && camera.stream) {
+      video.srcObject = camera.stream;
+      // Explicit play() required — autoPlay attribute alone doesn't reliably
+      // start playback when srcObject is assigned programmatically.
+      void video.play().catch(() => {});
     }
   }, [camera.stream]);
 
@@ -86,14 +90,14 @@ export default function SoloGameClient({
         </Button>
       </header>
 
-      {/* Hidden video element for card recognition — positioned offscreen
-          but with real dimensions so the browser decodes frames properly */}
+      {/* Hidden video element for card recognition — kept at native
+          resolution so the browser decodes frames properly for canvas capture */}
       <video
         ref={videoRef}
         autoPlay
         muted
         playsInline
-        className="pointer-events-none fixed -left-[9999px] -top-[9999px] h-[1px] w-[1px] opacity-0"
+        className="pointer-events-none fixed -left-[9999px] -top-[9999px] opacity-0"
         aria-hidden="true"
       />
 

@@ -56,15 +56,30 @@ export interface OnnxFeatureModel {
  * @returns OnnxFeatureModel with run() and dispose() methods
  */
 export async function loadOnnxModel(modelUrl: string): Promise<OnnxFeatureModel> {
+  console.log("[OnnxModel] Importing onnxruntime-web...");
   const ort = (await import("onnxruntime-web")) as unknown as OrtModule;
 
-  ort.env.wasm.wasmPaths =
-    "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.2/dist/";
+  // Serve WASM files locally for faster loading (no CDN round-trip).
+  // Files are copied from node_modules/onnxruntime-web/dist/ to public/ml/wasm/.
+  // In Worker context (blob: origin), relative paths don't resolve — derive the
+  // origin from the model URL which is already absolute when passed from the bridge.
+  let wasmBase = "/ml/wasm/";
+  try {
+    const origin = new URL(modelUrl).origin;
+    if (origin && origin !== "null") {
+      wasmBase = origin + "/ml/wasm/";
+    }
+  } catch {
+    // modelUrl is relative — we're on main thread, relative path is fine
+  }
+  ort.env.wasm.wasmPaths = wasmBase;
   ort.env.wasm.numThreads = 1;
 
+  console.log("[OnnxModel] Creating session from %s (wasm: %s)...", modelUrl, wasmBase);
   const session = await ort.InferenceSession.create(modelUrl, {
     executionProviders: ["wasm"],
   });
+  console.log("[OnnxModel] Session created successfully");
 
   return {
     async run(input: Float32Array, inputSize: number): Promise<Float32Array> {

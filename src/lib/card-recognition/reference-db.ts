@@ -112,6 +112,7 @@ interface Manifest {
 export async function loadAllReferenceDatabases(
   manifestUrl: string
 ): Promise<ReferenceDatabase> {
+  console.log("[ReferenceDB] Loading manifest from %s", manifestUrl);
   const response = await fetch(manifestUrl);
   if (!response.ok) {
     throw new Error(
@@ -120,10 +121,26 @@ export async function loadAllReferenceDatabases(
   }
 
   const manifest = (await response.json()) as Manifest;
+  console.log("[ReferenceDB] Manifest: %d sets", manifest.sets.length);
 
+  // Resolve each set's embeddingsUrl relative to the manifest URL.
+  // In Worker context (blob: origin), relative paths like "/ml/embeddings-OP01.json"
+  // cannot be resolved by fetch. If the manifest URL is absolute, extract its
+  // origin to resolve the relative embedding URLs.
+  let baseOrigin = "";
+  try {
+    baseOrigin = new URL(manifestUrl).origin;
+  } catch {
+    // manifestUrl is relative — we're in main thread and fetch handles it
+  }
+  const resolveUrl = (url: string): string =>
+    baseOrigin && url.startsWith("/") ? baseOrigin + url : url;
+
+  const t0 = Date.now();
   const databases = await Promise.all(
-    manifest.sets.map((entry) => loadReferenceDatabase(entry.embeddingsUrl))
+    manifest.sets.map((entry) => loadReferenceDatabase(resolveUrl(entry.embeddingsUrl)))
   );
+  console.log("[ReferenceDB] All %d sets loaded in %dms", databases.length, Date.now() - t0);
 
   const allEmbeddings: ReferenceEmbedding[] = [];
   let embeddingDim = 0;
@@ -132,6 +149,8 @@ export async function loadAllReferenceDatabases(
     allEmbeddings.push(...db.embeddings);
     if (db.embeddingDim > 0) embeddingDim = db.embeddingDim;
   }
+
+  console.log("[ReferenceDB] Total: %d cards, dim=%d", allEmbeddings.length, embeddingDim);
 
   return {
     embeddings: allEmbeddings,
