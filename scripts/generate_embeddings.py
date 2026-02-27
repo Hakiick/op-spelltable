@@ -39,6 +39,7 @@ INPUT_SIZE = 224
 AUGMENT_COUNT = 30
 DATA_DIR = Path("src/data/cards")
 OUTPUT_DIR = Path("public/ml")
+CACHE_DIR = Path(".cache/card-images")
 
 # ImageNet normalization
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
@@ -82,11 +83,70 @@ def load_model(device: torch.device):
 
 # ─── Image Processing ────────────────────────────────────────────────────────
 
-def download_image(url: str) -> Image.Image:
-    """Download an image from URL and return as PIL Image."""
+def get_cache_path(card_id: str) -> Path:
+    """Return the local cache path for a card image."""
+    return CACHE_DIR / f"{card_id}.jpg"
+
+
+def load_image(card_id: str, url: str) -> Image.Image:
+    """Load a card image from local cache, downloading if not cached."""
+    cached = get_cache_path(card_id)
+    if cached.exists():
+        return Image.open(cached).convert("RGB")
+
+    # Download and cache
     response = requests.get(url, timeout=30)
     response.raise_for_status()
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cached.write_bytes(response.content)
     return Image.open(BytesIO(response.content)).convert("RGB")
+
+
+def download_all_images(sets: list[str]):
+    """Download all card images to local cache. Skip already cached."""
+    total = 0
+    cached = 0
+    failed = 0
+
+    for set_code in sets:
+        json_path = DATA_DIR / f"{set_code}.json"
+        if not json_path.exists():
+            continue
+
+        with open(json_path) as f:
+            cards = json.load(f)
+
+        cards_to_download = []
+        for card in cards:
+            url = card.get("imageUrl")
+            if not url:
+                continue
+            total += 1
+            if get_cache_path(card["cardId"]).exists():
+                cached += 1
+            else:
+                cards_to_download.append(card)
+
+        if not cards_to_download:
+            continue
+
+        print(f"  Downloading {set_code}: {len(cards_to_download)} images...")
+        for card in cards_to_download:
+            try:
+                sys.stdout.write(f"    {card['cardId']}... ")
+                sys.stdout.flush()
+                response = requests.get(card["imageUrl"], timeout=30)
+                response.raise_for_status()
+                path = get_cache_path(card["cardId"])
+                CACHE_DIR.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(response.content)
+                sys.stdout.write("OK\n")
+            except Exception as e:
+                failed += 1
+                sys.stdout.write(f"FAILED ({e})\n")
+
+    downloaded = total - cached - failed
+    print(f"\nImages: {total} total, {cached} already cached, {downloaded} downloaded, {failed} failed")
 
 
 def remove_sample_watermark(img: Image.Image) -> Image.Image:
@@ -436,8 +496,8 @@ def generate_real_database(set_code: str, cards: list, model, device: torch.devi
             sys.stdout.write(f"  Processing {card['cardId']} ({processed}/{len(cards)})... ")
             sys.stdout.flush()
 
-            # Download image
-            raw_img = download_image(image_url)
+            # Load image (from cache or download)
+            raw_img = load_image(card["cardId"], image_url)
 
             # Remove SAMPLE watermark
             clean_img = remove_sample_watermark(raw_img)
@@ -548,6 +608,13 @@ def main():
 
     print(f"\nGenerating embeddings for: {', '.join(sets)} (mock={args.mock})")
 
+    # Phase 1: Download all images to local cache
+    if not args.mock:
+        print("\n── Phase 1: Download images ──")
+        t_dl = time.time()
+        download_all_images(sets)
+        print(f"Download phase: {time.time() - t_dl:.1f}s")
+
     # Load model once (unless mock mode)
     model = None
     if not args.mock:
@@ -556,7 +623,9 @@ def main():
         model = load_model(device)
         print(f"Model loaded in {time.time() - t0:.1f}s")
 
-    # Process each set
+    # Phase 2: Generate embeddings (local images only, no network)
+    if not args.mock:
+        print("\n── Phase 2: Generate embeddings (local) ──")
     new_entries = []
     t_start = time.time()
 

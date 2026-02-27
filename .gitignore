@@ -83,3 +83,6 @@ runs/
 .venv/
 .yolo-venv/
 __pycache__/
+
+# Image cache (downloaded card images)
+.cache/
