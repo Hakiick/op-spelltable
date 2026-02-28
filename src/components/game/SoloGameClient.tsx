@@ -6,6 +6,7 @@ import GameBoard from "@/components/game/GameBoard";
 import DonCounter from "@/components/game/DonCounter";
 import LifeTracker from "@/components/game/LifeTracker";
 import WebcamFeed from "@/components/video/WebcamFeed";
+import CameraSetup from "@/components/video/CameraSetup";
 import CardRecognitionOverlay from "@/components/video/CardRecognitionOverlay";
 import RecognitionPanel from "@/components/video/RecognitionPanel";
 import { useCamera } from "@/hooks/useCamera";
@@ -155,6 +156,13 @@ export default function SoloGameClient({
                 Stop Camera
               </Button>
             )}
+            <CameraSetup
+              devices={camera.devices}
+              settings={camera.settings}
+              stream={camera.stream}
+              onUpdateSettings={camera.updateSettings}
+              onApply={() => camera.startCamera()}
+            />
             <span className="text-xs text-gray-500">
               {camera.state === "active" && "Camera active"}
               {camera.state === "loading" && "Starting..."}

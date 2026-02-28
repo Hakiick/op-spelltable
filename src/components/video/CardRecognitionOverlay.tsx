@@ -88,7 +88,7 @@ export default function CardRecognitionOverlay({
                 aria-live="polite"
                 aria-label={`Recognition speed: ${fps} frames per second`}
               >
-                FPS: {fps}
+                FPS: {fps.toFixed(1)}
               </span>
               <span className="rounded bg-black/60 px-2 py-0.5 text-xs text-gray-300 backdrop-blur-sm">
                 {isUsingWorker ? "Worker" : "Main"}
@@ -239,18 +239,19 @@ export default function CardRecognitionOverlay({
 
                 // Determine label text and confidence for coloring
                 const isIdentified =
-                  "cardCode" in card && (card as IdentifiedCard).candidates !== undefined;
+                  "cardCode" in card &&
+                  (card as IdentifiedCard).candidates !== undefined;
                 const identified = isIdentified
                   ? (card as IdentifiedCard)
                   : null;
                 const labelConfidence =
-                  identified?.cardCode !== null && identified?.cardCode !== undefined
+                  identified?.cardCode !== null &&
+                  identified?.cardCode !== undefined
                     ? identified.matchConfidence
                     : card.confidence;
-                const labelText =
-                  identified?.cardCode
-                    ? `${identified.cardCode} (${Math.round(identified.matchConfidence * 100)}%)`
-                    : `Card ${idx + 1} (${Math.round(card.confidence * 100)}%)`;
+                const labelText = identified?.cardCode
+                  ? `${identified.cardCode} (${Math.round(identified.matchConfidence * 100)}%)`
+                  : `Card ${idx + 1} (${Math.round(card.confidence * 100)}%)`;
 
                 // Inner crop box (10% shrink on each side)
                 const cropInset = 10;

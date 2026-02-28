@@ -381,7 +381,7 @@ export function createWorkerBridge(
     ];
     const ART_LEFT_PCT = 0.08;
     const ART_WIDTH_PCT = 0.84;
-    const CONFIDENCE_GAP_THRESHOLD = 0.03;
+    const CONFIDENCE_GAP_THRESHOLD = 0.01;
 
     /** Identify a single cropped card image via MobileNetV3 embedding matching. */
     async function identifyCard(
@@ -502,13 +502,7 @@ export function createWorkerBridge(
         const gap = bestCandidates[0].confidence - bestCandidates[1].confidence;
         if (gap < CONFIDENCE_GAP_THRESHOLD) {
           console.log(
-            "[Identify] Ambiguous: %s (%.1f%%) vs %s (%.1f%%), gap=%.1f%% < %.0f%% — suppressed",
-            bestCandidates[0].cardCode,
-            bestCandidates[0].confidence * 100,
-            bestCandidates[1].cardCode,
-            bestCandidates[1].confidence * 100,
-            gap * 100,
-            CONFIDENCE_GAP_THRESHOLD * 100
+            `[Identify] Ambiguous: ${bestCandidates[0].cardCode} (${(bestCandidates[0].confidence * 100).toFixed(1)}%) vs ${bestCandidates[1].cardCode} (${(bestCandidates[1].confidence * 100).toFixed(1)}%), gap=${(gap * 100).toFixed(1)}% < ${(CONFIDENCE_GAP_THRESHOLD * 100).toFixed(0)}% — suppressed`
           );
           bestCandidates = [];
         }

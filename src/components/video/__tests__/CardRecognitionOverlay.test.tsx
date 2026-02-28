@@ -59,7 +59,7 @@ describe("CardRecognitionOverlay", () => {
       />
     );
 
-    expect(screen.getByText("FPS: 12")).toBeInTheDocument();
+    expect(screen.getByText("FPS: 12.0")).toBeInTheDocument();
   });
 
   it("hides FPS counter when not active", () => {

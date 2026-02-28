@@ -188,8 +188,8 @@ function histogramIntersection(a: Float32Array, b: Float32Array): number {
  * - dHash similarity (structural layout patterns)
  *
  * Weights adapt based on available signals:
- * - All 3 signals: 0.70 emb + 0.15 hist + 0.15 dhash
- * - Emb + dHash:   0.80 emb + 0.20 dhash
+ * - All 3 signals: 0.55 emb + 0.15 hist + 0.30 spatial
+ * - Emb + spatial: 0.65 emb + 0.35 spatial
  * - Emb + hist:    0.85 emb + 0.15 hist
  * - Emb only:      1.00 emb
  *
@@ -232,14 +232,14 @@ export function findTopCandidates(
     ) {
       const histSim = histogramIntersection(queryHistogram, ref.histogram);
       const dhSim = dHashSimilarity(queryDHash, ref.dhash);
-      const score = 0.7 * embSim + 0.15 * histSim + 0.15 * dhSim;
+      const score = 0.55 * embSim + 0.15 * histSim + 0.3 * dhSim;
       return {
         score,
         debug: `e=${(embSim * 100).toFixed(0)} h=${(histSim * 100).toFixed(0)} s=${(dhSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
       };
     } else if (useDHash && ref.dhash !== undefined) {
       const dhSim = dHashSimilarity(queryDHash, ref.dhash);
-      const score = 0.8 * embSim + 0.2 * dhSim;
+      const score = 0.65 * embSim + 0.35 * dhSim;
       return {
         score,
         debug: `e=${(embSim * 100).toFixed(0)} s=${(dhSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
