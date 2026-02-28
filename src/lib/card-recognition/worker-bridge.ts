@@ -367,11 +367,10 @@ export function createWorkerBridge(
       const preprocessedNormal = preprocessFrame(artCrop, cfg.inputSize);
       const preprocessedFlipped = preprocessFrame(flippedArt, cfg.inputSize);
 
-      const [embNormal, embFlipped] = await Promise.all(
-        [preprocessedNormal, preprocessedFlipped].map((pp) =>
-          model.run(pp, cfg.inputSize)
-        )
-      );
+      // ONNX Runtime WASM doesn't support concurrent session.run() calls
+      // ("Session already started" error), so run sequentially.
+      const embNormal = await model.run(preprocessedNormal, cfg.inputSize);
+      const embFlipped = await model.run(preprocessedFlipped, cfg.inputSize);
 
       const histNormal = computeHistogram(artCrop);
       const histFlipped = computeHistogram(flippedArt);
@@ -560,7 +559,8 @@ export function createWorkerBridge(
         detectedCards: sorted,
         identifiedCards,
       };
-    } catch {
+    } catch (err) {
+      console.error("[Recognize] Pipeline error:", err);
       const fps = recordCompletion();
       return {
         result: {
