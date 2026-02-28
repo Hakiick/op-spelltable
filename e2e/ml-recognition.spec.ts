@@ -80,9 +80,15 @@ async function waitForRecognitionResults(
       text.includes("[Score]") ||
       text.includes("[Identify]") ||
       text.includes("[Recognize]") ||
-      text.includes("[Search]")
+      text.includes("[Search]") ||
+      text.includes("[OCR]") ||
+      text.includes("[WorkerBridge]")
     ) {
       logs.push(text);
+    }
+    // Also capture warnings/errors for debugging
+    if (msg.type() === "warning" || msg.type() === "error") {
+      logs.push(`[${msg.type()}] ${text}`);
     }
   });
 
@@ -196,6 +202,14 @@ test.describe("ML Card Recognition", () => {
       }
     } else {
       console.log("No card matches found");
+    }
+
+    const ocrLogs = logs.filter((l) => l.includes("[OCR]"));
+    if (ocrLogs.length > 0) {
+      console.log("\nOCR results:");
+      for (const l of [...new Set(ocrLogs)].slice(0, 10)) {
+        console.log("  ", l);
+      }
     }
 
     if (identifyLogs.length > 0) {

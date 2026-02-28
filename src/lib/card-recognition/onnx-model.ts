@@ -55,7 +55,9 @@ export interface OnnxFeatureModel {
  * @param modelUrl Path to the .onnx model file (e.g., /ml/mobilenet_v3_large.onnx)
  * @returns OnnxFeatureModel with run() and dispose() methods
  */
-export async function loadOnnxModel(modelUrl: string): Promise<OnnxFeatureModel> {
+export async function loadOnnxModel(
+  modelUrl: string
+): Promise<OnnxFeatureModel> {
   console.log("[OnnxModel] Importing onnxruntime-web...");
   const ort = (await import("onnxruntime-web")) as unknown as OrtModule;
 
@@ -75,7 +77,11 @@ export async function loadOnnxModel(modelUrl: string): Promise<OnnxFeatureModel>
   ort.env.wasm.wasmPaths = wasmBase;
   ort.env.wasm.numThreads = 1;
 
-  console.log("[OnnxModel] Creating session from %s (wasm: %s)...", modelUrl, wasmBase);
+  console.log(
+    "[OnnxModel] Creating session from %s (wasm: %s)...",
+    modelUrl,
+    wasmBase
+  );
   const session = await ort.InferenceSession.create(modelUrl, {
     executionProviders: ["wasm"],
   });

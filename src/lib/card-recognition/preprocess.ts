@@ -8,7 +8,10 @@ const IMAGENET_STD = [0.229, 0.224, 0.225];
  *
  * Exported for testing purposes.
  */
-export function normalizePixel(pixelValue: number, channel: number = 0): number {
+export function normalizePixel(
+  pixelValue: number,
+  channel: number = 0
+): number {
   return (pixelValue / 255 - IMAGENET_MEAN[channel]) / IMAGENET_STD[channel];
 }
 

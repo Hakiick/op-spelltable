@@ -188,9 +188,9 @@ function histogramIntersection(a: Float32Array, b: Float32Array): number {
  * - dHash similarity (structural layout patterns)
  *
  * Weights adapt based on available signals:
- * - All 3 signals: 0.55 emb + 0.15 hist + 0.30 spatial
- * - Emb + spatial: 0.65 emb + 0.35 spatial
- * - Emb + hist:    0.85 emb + 0.15 hist
+ * - All 3 signals: 0.45 emb + 0.25 hist + 0.30 spatial
+ * - Emb + spatial: 0.55 emb + 0.45 spatial
+ * - Emb + hist:    0.60 emb + 0.40 hist
  * - Emb only:      1.00 emb
  *
  * When a colorFilter is provided, only reference cards matching that color are scored,
@@ -232,21 +232,21 @@ export function findTopCandidates(
     ) {
       const histSim = histogramIntersection(queryHistogram, ref.histogram);
       const dhSim = dHashSimilarity(queryDHash, ref.dhash);
-      const score = 0.55 * embSim + 0.15 * histSim + 0.3 * dhSim;
+      const score = 0.45 * embSim + 0.25 * histSim + 0.3 * dhSim;
       return {
         score,
         debug: `e=${(embSim * 100).toFixed(0)} h=${(histSim * 100).toFixed(0)} s=${(dhSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
       };
     } else if (useDHash && ref.dhash !== undefined) {
       const dhSim = dHashSimilarity(queryDHash, ref.dhash);
-      const score = 0.65 * embSim + 0.35 * dhSim;
+      const score = 0.55 * embSim + 0.45 * dhSim;
       return {
         score,
         debug: `e=${(embSim * 100).toFixed(0)} s=${(dhSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
       };
     } else if (useHistogram && ref.histogram && queryHistogram) {
       const histSim = histogramIntersection(queryHistogram, ref.histogram);
-      const score = 0.85 * embSim + 0.15 * histSim;
+      const score = 0.6 * embSim + 0.4 * histSim;
       return {
         score,
         debug: `e=${(embSim * 100).toFixed(0)} h=${(histSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
@@ -307,7 +307,21 @@ export function findTopCandidates(
     results.sort((a, b) => b.similarity - a.similarity);
   }
 
-  const topResults = results.slice(0, topK);
+  // Deduplicate by cardCode — keep only the highest-scoring entry for each card.
+  // Duplicate entries can occur when the same card appears in multiple set files
+  // or when the reference DB has overlapping coverage.
+  const seen = new Map<string, (typeof results)[0]>();
+  for (const r of results) {
+    const existing = seen.get(r.cardCode);
+    if (!existing || r.similarity > existing.similarity) {
+      seen.set(r.cardCode, r);
+    }
+  }
+  const deduped = [...seen.values()].sort(
+    (a, b) => b.similarity - a.similarity
+  );
+
+  const topResults = deduped.slice(0, topK);
   const candidateCount = topResults.length;
 
   // Debug: log per-signal scores for top candidates

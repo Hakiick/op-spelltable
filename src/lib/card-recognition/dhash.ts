@@ -43,7 +43,10 @@ export function computeDHash(imageData: ImageData): Float32Array {
       const startY = Math.floor(gy * cellH);
       const endY = Math.min(Math.floor((gy + 1) * cellH), height);
 
-      let sumR = 0, sumG = 0, sumB = 0, count = 0;
+      let sumR = 0,
+        sumG = 0,
+        sumB = 0,
+        count = 0;
       for (let y = startY; y < endY; y++) {
         for (let x = startX; x < endX; x++) {
           const idx = (y * width + x) * 4;
@@ -86,7 +89,10 @@ export function computeDHashFromRgb(
       const startY = Math.floor(gy * cellH);
       const endY = Math.min(Math.floor((gy + 1) * cellH), height);
 
-      let sumR = 0, sumG = 0, sumB = 0, count = 0;
+      let sumR = 0,
+        sumG = 0,
+        sumB = 0,
+        count = 0;
       for (let y = startY; y < endY; y++) {
         for (let x = startX; x < endX; x++) {
           const idx = (y * width + x) * 3;

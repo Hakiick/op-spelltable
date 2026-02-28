@@ -19,7 +19,9 @@ import {
   detectCards,
   disposeDetectionModel,
 } from "./detection";
-import { recognizeCardCode, disposeOcrWorker } from "./ocr";
+// OCR disabled — webcam resolution too low for Tesseract.js card code reading
+// import { recognizeCardCode, disposeOcrWorker } from "./ocr";
+import { disposeOcrWorker } from "./ocr";
 import { computeHistogram } from "./histogram";
 import { detectBorderColor } from "./color-filter";
 import { computeDHash } from "./dhash";
@@ -381,9 +383,10 @@ export function createWorkerBridge(
     ];
     const ART_LEFT_PCT = 0.08;
     const ART_WIDTH_PCT = 0.84;
-    const CONFIDENCE_GAP_THRESHOLD = 0.01;
+    // Gap filter removed — temporal smoothing handles frame-to-frame noise
+    // better than suppressing ambiguous single-frame results.
 
-    /** Identify a single cropped card image via MobileNetV3 embedding matching. */
+    /** Identify a single cropped card image via MobileNetV3 embedding + OCR. */
     async function identifyCard(
       croppedInput: ImageData,
       model: OnnxFeatureModel,
@@ -401,7 +404,8 @@ export function createWorkerBridge(
       let bestCandidates: RecognitionResult[] = [];
       let bestTopScore = -1;
 
-      // Multi-crop inference: try 3 vertical art crop variants
+      // Multi-crop inference: try 3 vertical art crop variants, pick the best
+      // Color filter disabled — webcam lighting causes incorrect border color detection
       for (const crop of ART_CROPS) {
         const artTop = Math.round(croppedInput.height * crop.topPct);
         const artHeight = Math.round(croppedInput.height * crop.heightPct);
@@ -438,7 +442,7 @@ export function createWorkerBridge(
           cfg.maxCandidates,
           cfg.confidenceThreshold,
           blendedHist ?? artHist,
-          detectedColor,
+          null, // No color filter — webcam conditions cause misdetection
           dhashNormal
         );
 
@@ -486,7 +490,7 @@ export function createWorkerBridge(
           cfg.maxCandidates,
           cfg.confidenceThreshold,
           blendedHist ?? artHist,
-          detectedColor,
+          null, // No color filter
           dhashFlipped
         );
 
@@ -494,17 +498,6 @@ export function createWorkerBridge(
         if (topFlipped > bestTopScore) {
           bestTopScore = topFlipped;
           bestCandidates = candidatesFlipped;
-        }
-      }
-
-      // Confidence gap filter: suppress ambiguous matches
-      if (bestCandidates.length >= 2) {
-        const gap = bestCandidates[0].confidence - bestCandidates[1].confidence;
-        if (gap < CONFIDENCE_GAP_THRESHOLD) {
-          console.log(
-            `[Identify] Ambiguous: ${bestCandidates[0].cardCode} (${(bestCandidates[0].confidence * 100).toFixed(1)}%) vs ${bestCandidates[1].cardCode} (${(bestCandidates[1].confidence * 100).toFixed(1)}%), gap=${(gap * 100).toFixed(1)}% < ${(CONFIDENCE_GAP_THRESHOLD * 100).toFixed(0)}% — suppressed`
-          );
-          bestCandidates = [];
         }
       }
 
@@ -518,13 +511,7 @@ export function createWorkerBridge(
       for (let di = 0; di < detectedCards.length; di++) {
         const d = detectedCards[di];
         console.log(
-          "[Recognize] Detection %d: conf=%.2f bbox=[%d,%d,%dx%d]",
-          di + 1,
-          d.confidence,
-          Math.round(d.bbox[0]),
-          Math.round(d.bbox[1]),
-          Math.round(d.bbox[2]),
-          Math.round(d.bbox[3])
+          `[Recognize] Detection ${di + 1}: conf=${d.confidence.toFixed(2)} bbox=[${Math.round(d.bbox[0])},${Math.round(d.bbox[1])},${Math.round(d.bbox[2])}x${Math.round(d.bbox[3])}]`
         );
       }
 
@@ -571,7 +558,7 @@ export function createWorkerBridge(
           const detection = toProcess[i];
           const [bx, by, bw, bh] = detection.bbox;
 
-          // Shrink bbox by 10% on each edge
+          // Shrink bbox by 10% on each edge to remove border noise
           const shrinkX = bw * 0.1;
           const shrinkY = bh * 0.1;
           const cropped = cropFromImageData(
