@@ -215,7 +215,9 @@ export function createWorkerBridge(
       await initDetectionModel();
       console.log("[WorkerBridge] YOLO model loaded");
     } catch {
-      console.warn("[WorkerBridge] YOLO model not available — detection disabled");
+      console.warn(
+        "[WorkerBridge] YOLO model not available — detection disabled"
+      );
     }
   }
 
@@ -231,13 +233,16 @@ export function createWorkerBridge(
       // Workers created by bundlers (Turbopack/webpack) may have an opaque
       // origin (blob: URL), which means relative paths like "/ml/model.onnx"
       // cannot be resolved by fetch().  Convert to absolute URLs here.
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
       const toAbsolute = (url: string): string =>
         url.startsWith("/") ? origin + url : url;
 
       const workerSuccess = await new Promise<boolean>((resolve) => {
         const timeout = setTimeout(() => {
-          console.warn("[WorkerBridge] Worker init timed out (30s), falling back to main thread");
+          console.warn(
+            "[WorkerBridge] Worker init timed out (30s), falling back to main thread"
+          );
           w.terminate();
           resolve(false);
         }, 30000);
@@ -368,6 +373,16 @@ export function createWorkerBridge(
       };
     }
 
+    /** Art crop geometry variants for multi-crop inference. */
+    const ART_CROPS = [
+      { topPct: 0.18, heightPct: 0.44 }, // Standard
+      { topPct: 0.15, heightPct: 0.44 }, // Shifted up
+      { topPct: 0.21, heightPct: 0.44 }, // Shifted down
+    ];
+    const ART_LEFT_PCT = 0.08;
+    const ART_WIDTH_PCT = 0.84;
+    const CONFIDENCE_GAP_THRESHOLD = 0.03;
+
     /** Identify a single cropped card image via MobileNetV3 embedding matching. */
     async function identifyCard(
       croppedInput: ImageData,
@@ -380,59 +395,126 @@ export function createWorkerBridge(
     }> {
       const detectedColor = detectBorderColor(croppedInput);
 
-      // Art crop: OP TCG cards have art at ~18%-62% vertically, ~8%-92% horizontally
-      const artTop = Math.round(croppedInput.height * 0.18);
-      const artHeight = Math.round(croppedInput.height * 0.44);
-      const artLeft = Math.round(croppedInput.width * 0.08);
-      const artWidth = Math.round(croppedInput.width * 0.84);
-      const artCrop = cropFromImageData(
-        croppedInput,
-        artLeft,
-        artTop,
-        artWidth,
-        artHeight
-      );
+      // Compute full-card histogram (border + art = more color signal)
+      const fullCardHist = computeHistogram(croppedInput);
 
-      const flippedArt = flipImageDataHorizontally(artCrop);
+      let bestCandidates: RecognitionResult[] = [];
+      let bestTopScore = -1;
 
-      const preprocessedNormal = preprocessFrame(artCrop, cfg.inputSize);
-      const preprocessedFlipped = preprocessFrame(flippedArt, cfg.inputSize);
+      // Multi-crop inference: try 3 vertical art crop variants
+      for (const crop of ART_CROPS) {
+        const artTop = Math.round(croppedInput.height * crop.topPct);
+        const artHeight = Math.round(croppedInput.height * crop.heightPct);
+        const artLeft = Math.round(croppedInput.width * ART_LEFT_PCT);
+        const artWidth = Math.round(croppedInput.width * ART_WIDTH_PCT);
+        const artCrop = cropFromImageData(
+          croppedInput,
+          artLeft,
+          artTop,
+          artWidth,
+          artHeight
+        );
 
-      // ONNX Runtime WASM doesn't support concurrent session.run() calls
-      // ("Session already started" error), so run sequentially.
-      const embNormal = await model.run(preprocessedNormal, cfg.inputSize);
-      const embFlipped = await model.run(preprocessedFlipped, cfg.inputSize);
+        const preprocessedNormal = preprocessFrame(artCrop, cfg.inputSize);
 
-      const histNormal = computeHistogram(artCrop);
-      const histFlipped = computeHistogram(flippedArt);
-      const dhashNormal = computeDHash(artCrop);
-      const dhashFlipped = computeDHash(flippedArt);
+        // ONNX Runtime WASM doesn't support concurrent session.run() calls
+        const embNormal = await model.run(preprocessedNormal, cfg.inputSize);
 
-      const candidatesNormal = findTopCandidates(
-        embNormal,
-        db,
-        cfg.maxCandidates,
-        cfg.confidenceThreshold,
-        histNormal,
-        detectedColor,
-        dhashNormal
-      );
-      const candidatesFlipped = findTopCandidates(
-        embFlipped,
-        db,
-        cfg.maxCandidates,
-        cfg.confidenceThreshold,
-        histFlipped,
-        detectedColor,
-        dhashFlipped
-      );
+        // Blend art-crop histogram with full-card histogram
+        const artHist = computeHistogram(artCrop);
+        let blendedHist: Float32Array | undefined;
+        if (artHist && fullCardHist) {
+          blendedHist = new Float32Array(artHist.length);
+          for (let i = 0; i < artHist.length; i++) {
+            blendedHist[i] = 0.6 * artHist[i] + 0.4 * fullCardHist[i];
+          }
+        }
 
-      const bestNormal = candidatesNormal[0]?.confidence ?? 0;
-      const bestFlipped = candidatesFlipped[0]?.confidence ?? 0;
-      const candidates =
-        bestFlipped > bestNormal ? candidatesFlipped : candidatesNormal;
+        const dhashNormal = computeDHash(artCrop);
 
-      return { candidates, detectedColor };
+        const candidates = findTopCandidates(
+          embNormal,
+          db,
+          cfg.maxCandidates,
+          cfg.confidenceThreshold,
+          blendedHist ?? artHist,
+          detectedColor,
+          dhashNormal
+        );
+
+        const topScore = candidates[0]?.confidence ?? 0;
+        if (topScore > bestTopScore) {
+          bestTopScore = topScore;
+          bestCandidates = candidates;
+        }
+      }
+
+      // Also try flipped orientation on the standard crop
+      {
+        const artTop = Math.round(croppedInput.height * ART_CROPS[0].topPct);
+        const artHeight = Math.round(
+          croppedInput.height * ART_CROPS[0].heightPct
+        );
+        const artLeft = Math.round(croppedInput.width * ART_LEFT_PCT);
+        const artWidth = Math.round(croppedInput.width * ART_WIDTH_PCT);
+        const artCrop = cropFromImageData(
+          croppedInput,
+          artLeft,
+          artTop,
+          artWidth,
+          artHeight
+        );
+        const flippedArt = flipImageDataHorizontally(artCrop);
+
+        const preprocessedFlipped = preprocessFrame(flippedArt, cfg.inputSize);
+        const embFlipped = await model.run(preprocessedFlipped, cfg.inputSize);
+
+        const artHist = computeHistogram(flippedArt);
+        let blendedHist: Float32Array | undefined;
+        if (artHist && fullCardHist) {
+          blendedHist = new Float32Array(artHist.length);
+          for (let i = 0; i < artHist.length; i++) {
+            blendedHist[i] = 0.6 * artHist[i] + 0.4 * fullCardHist[i];
+          }
+        }
+
+        const dhashFlipped = computeDHash(flippedArt);
+
+        const candidatesFlipped = findTopCandidates(
+          embFlipped,
+          db,
+          cfg.maxCandidates,
+          cfg.confidenceThreshold,
+          blendedHist ?? artHist,
+          detectedColor,
+          dhashFlipped
+        );
+
+        const topFlipped = candidatesFlipped[0]?.confidence ?? 0;
+        if (topFlipped > bestTopScore) {
+          bestTopScore = topFlipped;
+          bestCandidates = candidatesFlipped;
+        }
+      }
+
+      // Confidence gap filter: suppress ambiguous matches
+      if (bestCandidates.length >= 2) {
+        const gap = bestCandidates[0].confidence - bestCandidates[1].confidence;
+        if (gap < CONFIDENCE_GAP_THRESHOLD) {
+          console.log(
+            "[Identify] Ambiguous: %s (%.1f%%) vs %s (%.1f%%), gap=%.1f%% < %.0f%% — suppressed",
+            bestCandidates[0].cardCode,
+            bestCandidates[0].confidence * 100,
+            bestCandidates[1].cardCode,
+            bestCandidates[1].confidence * 100,
+            gap * 100,
+            CONFIDENCE_GAP_THRESHOLD * 100
+          );
+          bestCandidates = [];
+        }
+      }
+
+      return { candidates: bestCandidates, detectedColor };
     }
 
     try {

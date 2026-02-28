@@ -9,6 +9,10 @@ import {
   createRecognitionLoop,
   type RecognitionLoop,
 } from "@/lib/card-recognition/recognition-loop";
+import {
+  createTemporalSmoother,
+  type TemporalSmoother,
+} from "@/lib/card-recognition/temporal-smoother";
 import { captureFrame } from "@/lib/card-recognition/capture";
 import type {
   CardRecognitionState,
@@ -49,6 +53,7 @@ export function useCardRecognition(
 ): UseCardRecognitionReturn {
   const bridgeRef = useRef<WorkerBridge | null>(null);
   const loopRef = useRef<RecognitionLoop | null>(null);
+  const smootherRef = useRef<TemporalSmoother | null>(null);
   const isActiveRef = useRef(false);
   const initializedRef = useRef(false);
   const recognizingRef = useRef(false);
@@ -80,6 +85,13 @@ export function useCardRecognition(
       loopRef.current = createRecognitionLoop();
     }
     return loopRef.current;
+  }, []);
+
+  const getSmoother = useCallback((): TemporalSmoother => {
+    if (!smootherRef.current) {
+      smootherRef.current = createTemporalSmoother();
+    }
+    return smootherRef.current;
   }, []);
 
   // Initialize the bridge (loads model + embeddings).
@@ -185,6 +197,8 @@ export function useCardRecognition(
 
       const bridge = getBridge();
       const loop = getLoop();
+      const smoother = getSmoother();
+      smoother.reset();
       const currentConfig = config;
 
       loop.start(
@@ -208,13 +222,40 @@ export function useCardRecognition(
                 identifiedCards,
               }) => {
                 recognizingRef.current = false;
+
+                // Apply temporal smoothing to stabilize identifications
+                const smoothed = smoother.smooth(identifiedCards ?? []);
+
+                // Update bestOverall from smoothed results
+                let smoothedResult = result;
+                let smoothedCandidates = topCandidates;
+                const bestSmoothed = smoothed.reduce<
+                  (typeof smoothed)[0] | null
+                >(
+                  (best, c) =>
+                    c.cardCode &&
+                    c.matchConfidence > (best?.matchConfidence ?? 0)
+                      ? c
+                      : best,
+                  null
+                );
+                if (bestSmoothed?.cardCode) {
+                  smoothedResult = {
+                    cardCode: bestSmoothed.cardCode,
+                    confidence: bestSmoothed.matchConfidence,
+                    candidateCount: bestSmoothed.candidates?.length ?? 0,
+                    durationMs: result.durationMs,
+                  };
+                  smoothedCandidates = bestSmoothed.candidates ?? topCandidates;
+                }
+
                 setState((prev) => ({
                   ...prev,
                   status: "ready",
-                  lastResult: result,
-                  topCandidates,
+                  lastResult: smoothedResult,
+                  topCandidates: smoothedCandidates,
                   detectedCards: detectedCards ?? [],
-                  identifiedCards: identifiedCards ?? [],
+                  identifiedCards: smoothed,
                   fps,
                 }));
               },
@@ -237,7 +278,7 @@ export function useCardRecognition(
         crop
       );
     },
-    [config, getBridge, getLoop, initialize]
+    [config, getBridge, getLoop, getSmoother, initialize]
   );
 
   const stop = useCallback((): void => {
@@ -313,6 +354,10 @@ export function useCardRecognition(
       if (loopRef.current) {
         loopRef.current.stop();
         loopRef.current = null;
+      }
+      if (smootherRef.current) {
+        smootherRef.current.reset();
+        smootherRef.current = null;
       }
       if (bridgeRef.current) {
         bridgeRef.current.dispose();

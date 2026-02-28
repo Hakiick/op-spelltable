@@ -138,9 +138,15 @@ export async function loadAllReferenceDatabases(
 
   const t0 = Date.now();
   const databases = await Promise.all(
-    manifest.sets.map((entry) => loadReferenceDatabase(resolveUrl(entry.embeddingsUrl)))
+    manifest.sets.map((entry) =>
+      loadReferenceDatabase(resolveUrl(entry.embeddingsUrl))
+    )
   );
-  console.log("[ReferenceDB] All %d sets loaded in %dms", databases.length, Date.now() - t0);
+  console.log(
+    "[ReferenceDB] All %d sets loaded in %dms",
+    databases.length,
+    Date.now() - t0
+  );
 
   const allEmbeddings: ReferenceEmbedding[] = [];
   let embeddingDim = 0;
@@ -150,7 +156,11 @@ export async function loadAllReferenceDatabases(
     if (db.embeddingDim > 0) embeddingDim = db.embeddingDim;
   }
 
-  console.log("[ReferenceDB] Total: %d cards, dim=%d", allEmbeddings.length, embeddingDim);
+  console.log(
+    "[ReferenceDB] Total: %d cards, dim=%d",
+    allEmbeddings.length,
+    embeddingDim
+  );
 
   return {
     embeddings: allEmbeddings,
@@ -178,8 +188,8 @@ function histogramIntersection(a: Float32Array, b: Float32Array): number {
  * - dHash similarity (structural layout patterns)
  *
  * Weights adapt based on available signals:
- * - All 3 signals: 0.55 emb + 0.20 hist + 0.25 dhash
- * - Emb + dHash:   0.70 emb + 0.30 dhash
+ * - All 3 signals: 0.70 emb + 0.15 hist + 0.15 dhash
+ * - Emb + dHash:   0.80 emb + 0.20 dhash
  * - Emb + hist:    0.85 emb + 0.15 hist
  * - Emb only:      1.00 emb
  *
@@ -207,36 +217,58 @@ export function findTopCandidates(
   const useHistogram =
     !!queryHistogram && db.embeddings.some((e) => e.histogram);
   const useDHash =
-    queryDHash !== undefined && db.embeddings.some((e) => e.dhash !== undefined);
+    queryDHash !== undefined &&
+    db.embeddings.some((e) => e.dhash !== undefined);
 
   function scoreRef(ref: ReferenceEmbedding): { score: number; debug: string } {
     const embSim = cosineSimilarity(normalizedQuery, ref.embedding);
 
-    if (useHistogram && useDHash && ref.histogram && queryHistogram && ref.dhash !== undefined) {
+    if (
+      useHistogram &&
+      useDHash &&
+      ref.histogram &&
+      queryHistogram &&
+      ref.dhash !== undefined
+    ) {
       const histSim = histogramIntersection(queryHistogram, ref.histogram);
       const dhSim = dHashSimilarity(queryDHash, ref.dhash);
-      const score = 0.50 * embSim + 0.10 * histSim + 0.40 * dhSim;
-      return { score, debug: `e=${(embSim*100).toFixed(0)} h=${(histSim*100).toFixed(0)} s=${(dhSim*100).toFixed(0)} c=${ref.color ?? "?"}` };
+      const score = 0.7 * embSim + 0.15 * histSim + 0.15 * dhSim;
+      return {
+        score,
+        debug: `e=${(embSim * 100).toFixed(0)} h=${(histSim * 100).toFixed(0)} s=${(dhSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
+      };
     } else if (useDHash && ref.dhash !== undefined) {
       const dhSim = dHashSimilarity(queryDHash, ref.dhash);
-      const score = 0.55 * embSim + 0.45 * dhSim;
-      return { score, debug: `e=${(embSim*100).toFixed(0)} s=${(dhSim*100).toFixed(0)} c=${ref.color ?? "?"}` };
+      const score = 0.8 * embSim + 0.2 * dhSim;
+      return {
+        score,
+        debug: `e=${(embSim * 100).toFixed(0)} s=${(dhSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
+      };
     } else if (useHistogram && ref.histogram && queryHistogram) {
       const histSim = histogramIntersection(queryHistogram, ref.histogram);
       const score = 0.85 * embSim + 0.15 * histSim;
-      return { score, debug: `e=${(embSim*100).toFixed(0)} h=${(histSim*100).toFixed(0)} c=${ref.color ?? "?"}` };
+      return {
+        score,
+        debug: `e=${(embSim * 100).toFixed(0)} h=${(histSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
+      };
     }
-    return { score: embSim, debug: `e=${(embSim*100).toFixed(0)} c=${ref.color ?? "?"}` };
+    return {
+      score: embSim,
+      debug: `e=${(embSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
+    };
   }
 
   // Two-pass strategy:
   // Pass 1: If color detected, search only same-color cards (reduces search ~5x)
   // Pass 2: If no good match, fall back to all cards
-  let results: Array<{ cardCode: string; similarity: number; debug: string }> = [];
+  let results: Array<{ cardCode: string; similarity: number; debug: string }> =
+    [];
 
   if (colorFilter) {
     const sameColorRefs = db.embeddings.filter((e) => e.color === colorFilter);
-    console.log(`[Search] Color filter: ${colorFilter} → ${sameColorRefs.length}/${db.embeddings.length} candidates`);
+    console.log(
+      `[Search] Color filter: ${colorFilter} → ${sameColorRefs.length}/${db.embeddings.length} candidates`
+    );
 
     for (const ref of sameColorRefs) {
       const { score, debug } = scoreRef(ref);
@@ -248,8 +280,10 @@ export function findTopCandidates(
 
     // If same-color search produced weak results, fall back to all cards
     const bestSameColor = results[0]?.similarity ?? 0;
-    if (bestSameColor < 0.40) {
-      console.log(`[Search] Same-color best=${(bestSameColor*100).toFixed(1)}% < 40%, falling back to all cards`);
+    if (bestSameColor < 0.4) {
+      console.log(
+        `[Search] Same-color best=${(bestSameColor * 100).toFixed(1)}% < 40%, falling back to all cards`
+      );
       results = [];
       for (const ref of db.embeddings) {
         const { score, debug } = scoreRef(ref);
@@ -261,7 +295,9 @@ export function findTopCandidates(
     }
   } else {
     // No color detected — search all cards
-    console.log(`[Search] No color detected, searching all ${db.embeddings.length} cards`);
+    console.log(
+      `[Search] No color detected, searching all ${db.embeddings.length} cards`
+    );
     for (const ref of db.embeddings) {
       const { score, debug } = scoreRef(ref);
       if (score >= threshold) {
@@ -277,7 +313,9 @@ export function findTopCandidates(
   // Debug: log per-signal scores for top candidates
   for (let i = 0; i < Math.min(topResults.length, 5); i++) {
     const r = topResults[i];
-    console.log(`[Score] #${i+1}: ${r.cardCode} = ${(r.similarity*100).toFixed(1)}% [${r.debug}]`);
+    console.log(
+      `[Score] #${i + 1}: ${r.cardCode} = ${(r.similarity * 100).toFixed(1)}% [${r.debug}]`
+    );
   }
 
   return topResults.map((r) => ({
