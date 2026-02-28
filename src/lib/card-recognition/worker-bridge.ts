@@ -80,6 +80,37 @@ function cropFromImageData(
   return cropped;
 }
 
+/**
+ * Removes overlapping detections: if two boxes overlap >50% (IoU),
+ * keep only the higher-confidence one.
+ */
+function deduplicateDetections(detections: DetectedCard[]): DetectedCard[] {
+  const sorted = [...detections].sort((a, b) => b.confidence - a.confidence);
+  const kept: DetectedCard[] = [];
+  const suppressed = new Set<number>();
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (suppressed.has(i)) continue;
+    kept.push(sorted[i]);
+    for (let j = i + 1; j < sorted.length; j++) {
+      if (suppressed.has(j)) continue;
+      const [ax, ay, aw, ah] = sorted[i].bbox;
+      const [bx, by, bw, bh] = sorted[j].bbox;
+      const ix1 = Math.max(ax, bx);
+      const iy1 = Math.max(ay, by);
+      const ix2 = Math.min(ax + aw, bx + bw);
+      const iy2 = Math.min(ay + ah, by + bh);
+      const inter = Math.max(0, ix2 - ix1) * Math.max(0, iy2 - iy1);
+      if (inter === 0) continue;
+      const union = aw * ah + bw * bh - inter;
+      if (union > 0 && inter / union > 0.3) {
+        suppressed.add(j);
+      }
+    }
+  }
+  return kept;
+}
+
 export interface RecognizeResult {
   result: RecognitionOutput;
   topCandidates: RecognitionResult[];
@@ -407,16 +438,33 @@ export function createWorkerBridge(
     try {
       // Step 1: Detect card-like objects with YOLOv8n
       const detectedCards = await detectCards(imageData);
-      console.log(
-        "[Recognize] YOLO detected %d cards in %dx%d frame",
-        detectedCards.length,
-        imageData.width,
-        imageData.height
-      );
+      // Log detections with per-box confidence
+      for (let di = 0; di < detectedCards.length; di++) {
+        const d = detectedCards[di];
+        console.log(
+          "[Recognize] Detection %d: conf=%.2f bbox=[%d,%d,%dx%d]",
+          di + 1,
+          d.confidence,
+          Math.round(d.bbox[0]),
+          Math.round(d.bbox[1]),
+          Math.round(d.bbox[2]),
+          Math.round(d.bbox[3])
+        );
+      }
+
+      // Deduplicate overlapping detections: if two boxes overlap >50%, keep only the higher-confidence one
+      const deduped = deduplicateDetections(detectedCards);
+      if (deduped.length !== detectedCards.length) {
+        console.log(
+          "[Recognize] Dedup: %d → %d detections",
+          detectedCards.length,
+          deduped.length
+        );
+      }
 
       const sorted =
-        detectedCards.length > 0
-          ? [...detectedCards].sort((a, b) => b.confidence - a.confidence)
+        deduped.length > 0
+          ? [...deduped].sort((a, b) => b.confidence - a.confidence)
           : [];
 
       const maxIdentify = config.maxIdentify ?? 5;
