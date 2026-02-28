@@ -187,6 +187,9 @@ function histogramIntersection(a: Float32Array, b: Float32Array): number {
  * - HSV color histogram intersection (color distribution)
  * - dHash similarity (structural layout patterns)
  *
+ * Each signal is normalized to [0,1] from its empirical range before blending,
+ * so that all signals contribute on a comparable scale.
+ *
  * Weights adapt based on available signals:
  * - All 3 signals: 0.45 emb + 0.25 hist + 0.30 spatial
  * - Emb + spatial: 0.55 emb + 0.45 spatial
@@ -220,6 +223,17 @@ export function findTopCandidates(
     queryDHash !== undefined &&
     db.embeddings.some((e) => e.dhash !== undefined);
 
+  // Per-signal normalization: each signal has a different raw range.
+  // Normalizing to [0,1] before blending makes the final score more
+  // interpretable and boosts absolute confidence while preserving rankings.
+  // Ranges determined empirically from webcam vs reference image matching.
+  const normEmb = (v: number) =>
+    Math.min(1, Math.max(0, (v - 0.35) / 0.35)); // [0.35, 0.70] → [0, 1]
+  const normHist = (v: number) =>
+    Math.min(1, Math.max(0, (v - 0.05) / 0.30)); // [0.05, 0.35] → [0, 1]
+  const normSpatial = (v: number) =>
+    Math.min(1, Math.max(0, (v - 0.10) / 0.40)); // [0.10, 0.50] → [0, 1]
+
   function scoreRef(ref: ReferenceEmbedding): { score: number; debug: string } {
     const embSim = cosineSimilarity(normalizedQuery, ref.embedding);
 
@@ -232,28 +246,31 @@ export function findTopCandidates(
     ) {
       const histSim = histogramIntersection(queryHistogram, ref.histogram);
       const dhSim = dHashSimilarity(queryDHash, ref.dhash);
-      const score = 0.45 * embSim + 0.25 * histSim + 0.3 * dhSim;
+      const score =
+        0.45 * normEmb(embSim) +
+        0.25 * normHist(histSim) +
+        0.3 * normSpatial(dhSim);
       return {
         score,
         debug: `e=${(embSim * 100).toFixed(0)} h=${(histSim * 100).toFixed(0)} s=${(dhSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
       };
     } else if (useDHash && ref.dhash !== undefined) {
       const dhSim = dHashSimilarity(queryDHash, ref.dhash);
-      const score = 0.55 * embSim + 0.45 * dhSim;
+      const score = 0.55 * normEmb(embSim) + 0.45 * normSpatial(dhSim);
       return {
         score,
         debug: `e=${(embSim * 100).toFixed(0)} s=${(dhSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
       };
     } else if (useHistogram && ref.histogram && queryHistogram) {
       const histSim = histogramIntersection(queryHistogram, ref.histogram);
-      const score = 0.6 * embSim + 0.4 * histSim;
+      const score = 0.6 * normEmb(embSim) + 0.4 * normHist(histSim);
       return {
         score,
         debug: `e=${(embSim * 100).toFixed(0)} h=${(histSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
       };
     }
     return {
-      score: embSim,
+      score: normEmb(embSim),
       debug: `e=${(embSim * 100).toFixed(0)} c=${ref.color ?? "?"}`,
     };
   }

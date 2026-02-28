@@ -26,6 +26,7 @@ import { computeHistogram } from "./histogram";
 import { detectBorderColor } from "./color-filter";
 import { computeDHash } from "./dhash";
 import { loadOnnxModel, type OnnxFeatureModel } from "./onnx-model";
+import { enhanceCardImage } from "./enhance";
 
 const FPS_WINDOW_SIZE = 10;
 
@@ -396,10 +397,14 @@ export function createWorkerBridge(
       candidates: RecognitionResult[];
       detectedColor: string | null;
     }> {
-      const detectedColor = detectBorderColor(croppedInput);
+      // Enhancement disabled — luminance-preserving stretch still distorts color signal
+      // const enhanced = enhanceCardImage(croppedInput);
+      const enhanced = croppedInput;
+
+      const detectedColor = detectBorderColor(enhanced);
 
       // Compute full-card histogram (border + art = more color signal)
-      const fullCardHist = computeHistogram(croppedInput);
+      const fullCardHist = computeHistogram(enhanced);
 
       let bestCandidates: RecognitionResult[] = [];
       let bestTopScore = -1;
@@ -407,12 +412,12 @@ export function createWorkerBridge(
       // Multi-crop inference: try 3 vertical art crop variants, pick the best
       // Color filter disabled — webcam lighting causes incorrect border color detection
       for (const crop of ART_CROPS) {
-        const artTop = Math.round(croppedInput.height * crop.topPct);
-        const artHeight = Math.round(croppedInput.height * crop.heightPct);
-        const artLeft = Math.round(croppedInput.width * ART_LEFT_PCT);
-        const artWidth = Math.round(croppedInput.width * ART_WIDTH_PCT);
+        const artTop = Math.round(enhanced.height * crop.topPct);
+        const artHeight = Math.round(enhanced.height * crop.heightPct);
+        const artLeft = Math.round(enhanced.width * ART_LEFT_PCT);
+        const artWidth = Math.round(enhanced.width * ART_WIDTH_PCT);
         const artCrop = cropFromImageData(
-          croppedInput,
+          enhanced,
           artLeft,
           artTop,
           artWidth,
@@ -455,14 +460,14 @@ export function createWorkerBridge(
 
       // Also try flipped orientation on the standard crop
       {
-        const artTop = Math.round(croppedInput.height * ART_CROPS[0].topPct);
+        const artTop = Math.round(enhanced.height * ART_CROPS[0].topPct);
         const artHeight = Math.round(
-          croppedInput.height * ART_CROPS[0].heightPct
+          enhanced.height * ART_CROPS[0].heightPct
         );
-        const artLeft = Math.round(croppedInput.width * ART_LEFT_PCT);
-        const artWidth = Math.round(croppedInput.width * ART_WIDTH_PCT);
+        const artLeft = Math.round(enhanced.width * ART_LEFT_PCT);
+        const artWidth = Math.round(enhanced.width * ART_WIDTH_PCT);
         const artCrop = cropFromImageData(
-          croppedInput,
+          enhanced,
           artLeft,
           artTop,
           artWidth,
